@@ -1,0 +1,6 @@
+*.vs/
+*.vcxproj*
+*.filters
+*.sln
+*.exe
+out/*
