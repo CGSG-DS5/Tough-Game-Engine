@@ -19,7 +19,7 @@ find_package(SDL3 REQUIRED CONFIG)
 
 find_package(Vulkan REQUIRED)
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp "src/win/win.h" "src/win/win.cpp")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL3::SDL3
