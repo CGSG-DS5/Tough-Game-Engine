@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  **/
 
-#include "win.h"
+#include "tge.h"
 
 void tge::window_handler::on_resize(int32_t wigth, int32_t height) {
 }

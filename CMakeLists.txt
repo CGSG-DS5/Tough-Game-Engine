@@ -19,7 +19,13 @@ find_package(SDL3 REQUIRED CONFIG)
 
 find_package(Vulkan REQUIRED)
 
-add_executable(${PROJECT_NAME} src/main.cpp "src/win/win.h" "src/win/win.cpp")
+add_executable(${PROJECT_NAME} "src/main.cpp" "src/win/win.h" "src/win/win.cpp")
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_precompile_headers(${PROJECT_NAME} PRIVATE [["src/tge.h"]])
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL3::SDL3
