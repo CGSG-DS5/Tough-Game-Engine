@@ -1,3 +1,8 @@
+/***
+ * Copyright (c) 2026 Tough Game Engine Contributors
+ * SPDX-License-Identifier: MIT
+ **/
+
 #include <string>
 
 #include <SDL3/SDL.h>

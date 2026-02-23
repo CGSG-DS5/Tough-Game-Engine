@@ -1,3 +1,8 @@
+/***
+ * Copyright (c) 2026 Tough Game Engine Contributors
+ * SPDX-License-Identifier: MIT
+ **/
+
 #include "win.h"
 
 void tge::window_handler::on_resize(int32_t wigth, int32_t height) {
