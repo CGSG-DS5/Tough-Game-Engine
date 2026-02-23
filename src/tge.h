@@ -6,6 +6,9 @@
 #ifndef __tge_h_
 #define __tge_h_
 
-#include "win.h"
+#include "def.h"
+
+#include "render/core/core.h"
+#include "win/win.h"
 
 #endif  // __tge_h_

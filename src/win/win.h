@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: MIT
  **/
 
-#include <string>
+#ifndef __tge_win_h_
+#define __tge_win_h_
 
-#include <SDL3/SDL.h>
+#include "def.h"
 
 namespace tge {
   class window_handler {
@@ -24,3 +25,5 @@ namespace tge {
     void run();
   };
 }
+
+#endif  // __tge_win_h_
