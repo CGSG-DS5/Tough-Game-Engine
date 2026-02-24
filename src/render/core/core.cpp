@@ -14,7 +14,7 @@ tge::core::core(const std::span<const char * const> &required_extensions) :
 
 vk::raii::Instance tge::core::create_instance(const std::span<const char * const> &required_extensions) {
   return context.createInstance(
-    vk::InstanceCreateInfo (
+    vk::InstanceCreateInfo(
       vk::InstanceCreateFlags(),
       &application_info().get(),
       layers().get(),

@@ -10,12 +10,12 @@
  * STL Libraries
  ***/
 
-#include <vector>
 #include <array>
-#include <string>
-#include <span>
 #include <iostream>
 #include <ranges>
+#include <span>
+#include <string>
+#include <vector>
 
 /***
  * SDL Support
