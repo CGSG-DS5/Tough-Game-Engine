@@ -13,12 +13,16 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <span>
+#include <iostream>
+#include <ranges>
 
 /***
  * SDL Support
  ***/
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 /***
  * Vulkan Support

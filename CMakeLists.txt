@@ -19,7 +19,7 @@ find_package(SDL3 REQUIRED CONFIG)
 
 find_package(Vulkan REQUIRED)
 
-add_executable(${PROJECT_NAME} "src/main.cpp" "src/win/win.cpp")
+add_executable(${PROJECT_NAME} "src/main.cpp" "src/win/win.cpp" "src/render/core/core.cpp" "src/render/core/core_exception.h"    "src/render/core/create_infos/application_info.h" "src/render/core/create_infos/infos.h" "src/render/core/create_infos/layers.h" "src/render/core/create_infos/info_template.h" "src/render/core/create_infos/instance_extensions.h" "src/render/core/create_infos/debug_messenger_info.h" "src/render/core/create_infos/infos.cpp" "src/render/core/create_infos/validation_features.h")
 
 target_include_directories(${PROJECT_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -30,6 +30,10 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE [["tge.h"]])
 target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL3::SDL3
     Vulkan::Vulkan
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Debug>:DEBUG>
 )
 
 if (WIN32 AND TARGET SDL3::SDL3-shared)
