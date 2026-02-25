@@ -83,7 +83,9 @@ std::vector<const char *> tge::instance_extensions::get_exts(
   std::vector<const char *> supported_additional = get_supported(additional_exts, extension_names);
   all_extentions.insert(all_extentions.end(), supported_additional.begin(), supported_additional.end());
 
-  all_extentions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
+  if (!layers(ctx).get().empty()) {
+    all_extentions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
+  }
 
   return all_extentions;
 }
