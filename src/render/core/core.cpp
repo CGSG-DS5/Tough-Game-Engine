@@ -7,7 +7,7 @@
 
 tge::core::core(const std::span<const char * const> &required_extensions) :
     instance(create_instance(required_extensions)),
-    debug_messenger(instance.createDebugUtilsMessengerEXT(debug_messenger_info().get())),
+    debug_messenger(create_debugger()),
     physical_device(create_physical_device())
 {
 }
@@ -17,7 +17,7 @@ vk::raii::Instance tge::core::create_instance(const std::span<const char * const
     vk::InstanceCreateInfo(
       vk::InstanceCreateFlags(),
       &application_info().get(),
-      layers().get(),
+      layers(context).get(),
       instance_extensions(required_extensions, context).get()
     )
     .setPNext(&debug_messenger_info().get()

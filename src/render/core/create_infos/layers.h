@@ -11,9 +11,12 @@
 namespace tge {
   class layers : public info_template<std::vector<const char *>> {
   public:
-    layers() :
-      info_template(std::initializer_list {"VK_LAYER_KHRONOS_validation"})
+    layers(const vk::raii::Context &ctx) :
+      info_template(get_layers(ctx))
     {}
+
+  private:
+    std::vector<const char *> get_layers(const vk::raii::Context &ctx);
   };
 }
 

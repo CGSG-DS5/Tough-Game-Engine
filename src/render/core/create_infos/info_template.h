@@ -28,6 +28,16 @@ namespace tge {
     private:
       T info;
     };
+
+  std::vector<const char *> get_supported(
+    const std::span<const char * const> &required,
+    const std::span<const char * const> &supported
+  );
+
+  std::vector<const char *> get_unsupported(
+    const std::span<const char * const> &required,
+    const std::span<const char * const> &supported
+  );
 }
 
 #endif  // __tge_info_template_info_
