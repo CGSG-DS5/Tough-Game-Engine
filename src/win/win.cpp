@@ -17,6 +17,17 @@ void tge::window_handler::on_mouse_up(int32_t button, int32_t x, int32_t y) {
 void tge::window_handler::on_mouse_down(int32_t button, int32_t x, int32_t y) {
 }
 
+std::span<const char * const> tge::window_handler::get_sdl_extensions() {
+  uint32_t sdl_extensions_count = 0;
+  const char * const *sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extensions_count);
+
+  if (sdl_extensions == nullptr) {
+    throw new core_exception(SDL_GetError(), 30);
+  }
+
+  return std::span<const char * const>(sdl_extensions, sdl_extensions_count);
+}
+
 tge::window_handler::window_handler(const std::string &title, int32_t width, int32_t height) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     error = 1;

@@ -10,15 +10,19 @@
  * STL Libraries
  ***/
 
-#include <vector>
 #include <array>
+#include <iostream>
+#include <ranges>
+#include <span>
 #include <string>
+#include <vector>
 
 /***
  * SDL Support
  ***/
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 /***
  * Vulkan Support
