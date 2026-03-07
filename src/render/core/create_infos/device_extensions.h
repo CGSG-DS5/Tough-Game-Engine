@@ -11,14 +11,14 @@
 namespace tge {
   class device_extensions : public info_template<std::vector<const char *>> {
   public:
-    device_extensions(const vk::raii::PhysicalDevice &phys_device) :
+    device_extensions(vk::PhysicalDevice phys_device) :
         info_template(get_exts(phys_device)) {
     }
 
   private:
     static const std::vector<const char *> additional_exts;
 
-    static std::vector<const char *> get_exts(const vk::raii::PhysicalDevice &phys_device);
+    static std::vector<const char *> get_exts(vk::PhysicalDevice phys_device);
   };
 }
 

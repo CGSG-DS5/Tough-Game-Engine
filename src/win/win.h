@@ -22,7 +22,7 @@ namespace tge {
   public:
     window_handler(const std::string &title, int32_t width, int32_t height);
 
-    static std::span<const char * const> get_sdl_extensions();
+    SDL_Window * get_window_handle();
 
     void run();
   };

@@ -15,7 +15,9 @@
 namespace tge {
   class core {
   public:
-    core(const std::span<const char * const> &required_extensions);
+    core(SDL_Window *window);
+
+    ~core();
 
   private:
     vk::raii::Context context {};
@@ -23,12 +25,16 @@ namespace tge {
     vk::raii::Instance instance;
     vk::raii::DebugUtilsMessengerEXT debug_messenger;
     vk::raii::PhysicalDevice physical_device;
+    vk::SurfaceKHR surface;
     vk::raii::Device device;
+    vk::raii::Queue queue;
 
-    vk::raii::Instance create_instance(const std::span<const char * const> &required_extensions);
+    vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();
     vk::raii::PhysicalDevice create_physical_device();
-    vk::raii::Device create_device();
+    void create_suface(SDL_Window *window);
+    vk::raii::Device create_device(SDL_Window *window);
+    vk::raii::Queue create_queue();
   };
 }
 

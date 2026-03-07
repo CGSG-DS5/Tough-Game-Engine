@@ -12,5 +12,6 @@
 #include "debug_messenger_info.h"
 #include "validation_features.h"
 #include "device_extensions.h"
+#include "queue_info.h"
 
 #endif // __tge_infos_

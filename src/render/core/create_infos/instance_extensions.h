@@ -11,14 +11,14 @@
 namespace tge {
   class instance_extensions : public info_template<std::vector<const char *>> {
   public:
-    instance_extensions(std::span<const char * const> required_exts, const vk::raii::Context &ctx) :
-        info_template(get_exts(required_exts, ctx)) {
+    instance_extensions(const vk::raii::Context &ctx) :
+        info_template(get_exts(ctx)) {
     }
 
   private:
     static const std::vector<const char *> additional_exts;
 
-    static std::vector<const char *> get_exts(std::span<const char * const> required_exts, const vk::raii::Context &ctx);
+    static std::vector<const char *> get_exts(const vk::raii::Context &ctx);
   };
 }
 

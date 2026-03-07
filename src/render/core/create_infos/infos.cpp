@@ -25,6 +25,7 @@ std::vector<const char *> tge::get_supported(
       result.push_back(extension_name);
     }
   }
+    static const std::vector<float> priority;
 
   return result;
 }
@@ -57,11 +58,19 @@ const std::vector<const char *> tge::instance_extensions::additional_exts {
   VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 };
 
-std::vector<const char *> tge::instance_extensions::get_exts(
-      std::span<const char * const> required_exts,
-      const vk::raii::Context &ctx) {
-  std::vector<const char *> all_extentions;
-  all_extentions.reserve(required_exts.size());
+std::span<const char * const> get_sdl_extensions() {
+  uint32_t sdl_extensions_count = 0;
+  const char * const *sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extensions_count);
+
+  if (sdl_extensions == nullptr) {
+    throw new tge::core_exception(SDL_GetError(), 30);
+  }
+
+  return std::span<const char * const>(sdl_extensions, sdl_extensions_count);
+}
+
+std::vector<const char *> tge::instance_extensions::get_exts(const vk::raii::Context &ctx) {
+  std::span<const char * const> required_exts = get_sdl_extensions();
 
   /* Check extensions */
   std::vector<vk::ExtensionProperties> extension_properties = ctx.enumerateInstanceExtensionProperties();
@@ -78,8 +87,10 @@ std::vector<const char *> tge::instance_extensions::get_exts(
   if (!required_unsupported.empty())
     throw new core_exception(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
 
+  std::vector<const char *> all_extentions;
   std::vector<const char *> supported_additional = get_supported(additional_exts, extension_names);
   all_extentions.insert(all_extentions.end(), supported_additional.begin(), supported_additional.end());
+  all_extentions.insert(all_extentions.end(), required_exts.begin(), required_exts.end());
 
   if (!layers(ctx).get().empty()) {
     all_extentions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
@@ -202,7 +213,7 @@ std::vector<const char *> tge::layers::get_layers(const vk::raii::Context &ctx) 
 /***
  * Device extensions
  ***/
-std::vector<const char *> tge::device_extensions::get_exts(const vk::raii::PhysicalDevice &phys_device) {
+std::vector<const char *> tge::device_extensions::get_exts(vk::PhysicalDevice phys_device) {
   std::vector<vk::ExtensionProperties> extension_properties = phys_device.enumerateDeviceExtensionProperties();
   std::vector<const char *> extension_names;
   extension_names.reserve(extension_properties.size());
@@ -219,9 +230,33 @@ std::vector<const char *> tge::device_extensions::get_exts(const vk::raii::Physi
   std::vector<const char *> required_unsupported = get_unsupported(required_extensions, extension_names);
 
   // extension not supported
-  if (required_unsupported.empty())
+  if (!required_unsupported.empty())
     throw new core_exception(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
 
   return required_extensions;
 }
 
+/***
+ * Queue info
+ ***/
+
+const std::vector<float> tge::queue_info::priority {1.f};
+
+uint32_t tge::queue_info::get_family_index(vk::PhysicalDevice device, vk::SurfaceKHR surface) {
+  std::vector<vk::QueueFamilyProperties> props = device.getQueueFamilyProperties();
+
+  int32_t queue_family_index = -1;
+  for (const vk::QueueFamilyProperties &prop : props) {
+    queue_family_index++;
+
+    if (!(prop.queueFlags & vk::QueueFlagBits::eGraphics)) continue;
+    if (!(prop.queueFlags & vk::QueueFlagBits::eCompute))  continue;
+    if (!(prop.queueFlags & vk::QueueFlagBits::eTransfer)) continue;
+
+    if (!(device.getSurfaceSupportKHR(queue_family_index, surface))) continue;
+
+    return queue_family_index;
+  }
+
+  throw new core_exception("Could not find queue family with required flags", 30);
+}
