@@ -63,9 +63,7 @@ std::vector<const char *> tge::instance_extensions::get_exts(
   std::vector<const char *> all_extentions;
   all_extentions.reserve(required_exts.size());
 
-  /***
-   * Check extensions
-   ***/
+  /* Check extensions */
   std::vector<vk::ExtensionProperties> extension_properties = ctx.enumerateInstanceExtensionProperties();
   std::vector<const char *> extension_names;
   extension_names.reserve(extension_properties.size());
@@ -200,3 +198,30 @@ std::vector<const char *> tge::layers::get_layers(const vk::raii::Context &ctx) 
 
   return get_supported(required, layer_names);
 }
+
+/***
+ * Device extensions
+ ***/
+std::vector<const char *> tge::device_extensions::get_exts(const vk::raii::PhysicalDevice &phys_device) {
+  std::vector<vk::ExtensionProperties> extension_properties = phys_device.enumerateDeviceExtensionProperties();
+  std::vector<const char *> extension_names;
+  extension_names.reserve(extension_properties.size());
+
+  for (const vk::ExtensionProperties &props : extension_properties) {
+    extension_names.push_back(props.extensionName);
+  }
+
+  std::vector<const char *> required_extensions {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME
+  };
+
+  std::vector<const char *> required_unsupported = get_unsupported(required_extensions, extension_names);
+
+  // extension not supported
+  if (required_unsupported.empty())
+    throw new core_exception(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
+
+  return required_extensions;
+}
+
