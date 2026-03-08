@@ -10,3 +10,16 @@ tge::render::render(bool vsync, bool triple_buffer) :
   core(get_window_handle(), vsync, triple_buffer) {
   run();
 }
+
+void tge::render::on_resize(int32_t wigth, int32_t height) {
+  core::resize();
+}
+
+void tge::render::on_mouse_motion(int32_t x, int32_t y) {
+}
+
+void tge::render::on_mouse_up(int32_t button, int32_t x, int32_t y) {
+}
+
+void tge::render::on_mouse_down(int32_t button, int32_t x, int32_t y) {
+}

@@ -5,18 +5,6 @@
 
 #include "tge.h"
 
-void tge::window_handler::on_resize(int32_t wigth, int32_t height) {
-}
-
-void tge::window_handler::on_mouse_motion(int32_t x, int32_t y) {
-}
-
-void tge::window_handler::on_mouse_up(int32_t button, int32_t x, int32_t y) {
-}
-
-void tge::window_handler::on_mouse_down(int32_t button, int32_t x, int32_t y) {
-}
-
 tge::window_handler::window_handler(const std::string &title, int32_t width, int32_t height) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     error = 1;
