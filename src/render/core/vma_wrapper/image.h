@@ -15,7 +15,7 @@ namespace tge {
   class image {
   public:
     image(
-      vma_allocator &alloc,
+      const vma_allocator &alloc,
       const vk::raii::Device &device,
       const vk::Image img,
       const vk::Format fmt
@@ -29,7 +29,7 @@ namespace tge {
     ~image();
 
   private:
-    vma_allocator & const allocator;
+    const vma_allocator & allocator;
     vk::Image image_handle;
     vk::raii::ImageView image_view;
     VmaAllocation mem = VK_NULL_HANDLE;

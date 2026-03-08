@@ -6,7 +6,7 @@
 #include "tge.h"
 
 tge::image::image(
-  vma_allocator &alloc,
+  const vma_allocator &alloc,
   const vk::raii::Device &device,
   const vk::Image img,
   const vk::Format fmt

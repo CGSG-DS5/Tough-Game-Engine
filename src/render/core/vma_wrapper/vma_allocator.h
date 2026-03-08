@@ -25,7 +25,7 @@ namespace tge {
 
     ~vma_allocator();
 
-    operator VmaAllocator();
+    operator VmaAllocator() const;
 
     image create_image(const vk::Image img, const vk::Format fmt);
 

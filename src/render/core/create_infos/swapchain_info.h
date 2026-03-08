@@ -14,34 +14,28 @@ namespace tge {
     swapchain_info(
       vk::PhysicalDevice device,
       vk::SurfaceKHR surface,
-      const uint32_t swapchain_images_num,
-      const uint32_t W, const uint32_t H,
-      const bool vsync, const bool triple_buffer,
+      const vk::Extent2D extent,
+      const vk::PresentModeKHR present_mode,
       vk::SwapchainKHR old_swapchain = {}
     ) :
       info_template(
         vk::SwapchainCreateFlagsKHR(),
         surface,
-        swapchain_images_num,
+        present_mode == vk::PresentModeKHR::eMailbox ? 3 : 2,
         vk::Format::eB8G8R8A8Unorm,
         vk::ColorSpaceKHR::eSrgbNonlinear,
-        vk::Extent2D(W, H),
+        extent,
         1,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
         vk::SharingMode::eExclusive,
         nullptr,
         vk::SurfaceTransformFlagBitsKHR::eIdentity,
         vk::CompositeAlphaFlagBitsKHR::eOpaque,
-        get_present_mode(device, surface, vsync, triple_buffer),
+        present_mode,
         true,
         old_swapchain
       )
     {}
-
-    vk::PresentModeKHR get_present_mode(
-      vk::PhysicalDevice device, vk::SurfaceKHR surface,
-      const bool vsync, const bool triple_buffer
-    );
   };
 }
 

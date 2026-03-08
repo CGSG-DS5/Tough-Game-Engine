@@ -36,7 +36,7 @@ tge::vma_allocator::vma_allocator(vma_allocator &&other) noexcept
   other.allocator = VK_NULL_HANDLE;
 }
 
-tge::vma_allocator::operator VmaAllocator() {
+tge::vma_allocator::operator VmaAllocator() const {
   return allocator;
 }
 
