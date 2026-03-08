@@ -17,8 +17,8 @@ tge::core::core(SDL_Window *window, bool vsync, bool triple_buffer) :
   swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer)),
   swapchain(create_swapchain()),
   swapchain_images(create_swapchain_images()),
-  command_pool(create_command_pool())
-{
+  command_pool(create_command_pool()),
+  descriptor_pool(create_descriptor_pool()) {
 }
 
 vk::raii::Instance tge::core::create_instance() {
@@ -159,3 +159,11 @@ vk::raii::CommandPool tge::core::create_command_pool() {
   );
 }
 
+vk::raii::DescriptorPool tge::core::create_descriptor_pool() {
+  return device.createDescriptorPool(
+    vk::DescriptorPoolCreateInfo(
+      vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
+      1024
+    )
+  );
+}

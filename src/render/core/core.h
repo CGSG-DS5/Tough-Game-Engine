@@ -38,6 +38,7 @@ namespace tge {
     std::vector<image> swapchain_images;
 
     const vk::raii::CommandPool command_pool;
+    const vk::raii::DescriptorPool descriptor_pool;
 
     vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();
@@ -52,6 +53,7 @@ namespace tge {
     std::vector<image> create_swapchain_images();
 
     vk::raii::CommandPool create_command_pool();
+    vk::raii::DescriptorPool create_descriptor_pool();
   };
 }
 
