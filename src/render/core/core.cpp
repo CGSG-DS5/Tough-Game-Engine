@@ -11,6 +11,7 @@ tge::core::core(SDL_Window *window, bool vsync, bool triple_buffer) :
   physical_device(create_physical_device()),
   surface(*instance, window),
   device(create_device(window)),
+  queue_family_index(get_queue_family_index()),
   queue(create_queue()),
   allocator(create_allocator()),
   swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer)),
@@ -69,8 +70,12 @@ vk::raii::Device tge::core::create_device(SDL_Window *window) {
   );
 }
 
+uint32_t tge::core::get_queue_family_index() {
+  return queue_info(physical_device, surface).get().queueFamilyIndex;
+}
+
 vk::raii::Queue tge::core::create_queue() {
-  return device.getQueue(queue_info(physical_device, surface).get().queueFamilyIndex, 0);
+  return device.getQueue(queue_family_index, 0);
 }
 
 tge::vma_allocator tge::core::create_allocator() {

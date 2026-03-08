@@ -29,6 +29,7 @@ namespace tge {
     const vk::raii::PhysicalDevice physical_device;
     const raii_surface surface;
     const vk::raii::Device device;
+    const uint32_t queue_family_index;
     const vk::raii::Queue queue;
     const vma_allocator allocator;
 
@@ -40,6 +41,7 @@ namespace tge {
     vk::raii::DebugUtilsMessengerEXT create_debugger();
     vk::raii::PhysicalDevice create_physical_device();
     vk::raii::Device create_device(SDL_Window *window);
+    uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();
     vma_allocator create_allocator();
 
