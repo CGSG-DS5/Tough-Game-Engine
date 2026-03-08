@@ -224,7 +224,7 @@ std::vector<const char *> tge::device_extensions::get_exts(vk::PhysicalDevice ph
 
   std::vector<const char *> required_extensions {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME
+    // VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME
   };
 
   std::vector<const char *> required_unsupported = get_unsupported(required_extensions, extension_names);

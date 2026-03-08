@@ -10,8 +10,7 @@ tge::image::image(
   const vk::raii::Device &device,
   const vk::Image img,
   const vk::Format fmt
-)
-  : allocator(alloc), image_handle(img), image_view(create_image_view(device, fmt)) {
+) : allocator(alloc), image_handle(img), image_view(create_image_view(device, fmt)) {
 }
 
 vk::raii::ImageView tge::image::create_image_view(
@@ -33,9 +32,9 @@ vk::raii::ImageView tge::image::create_image_view(
   );
 }
 
-tge::image::image(image &&other) noexcept
-  : allocator(other.allocator), image_handle(other.image_handle),
-    image_view(std::move(other.image_view)), mem(other.mem) {
+tge::image::image(image &&other) noexcept :
+  allocator(other.allocator), image_handle(other.image_handle),
+  image_view(std::move(other.image_view)), mem(other.mem) {
   other.image_handle = VK_NULL_HANDLE;
 }
 

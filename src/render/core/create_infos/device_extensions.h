@@ -12,7 +12,7 @@ namespace tge {
   class device_extensions : public info_template<std::vector<const char *>> {
   public:
     device_extensions(vk::PhysicalDevice phys_device) :
-        info_template(get_exts(phys_device)) {
+      info_template(get_exts(phys_device)) {
     }
 
   private:

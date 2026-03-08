@@ -27,8 +27,10 @@ vk::raii::Instance tge::core::create_instance() {
       layers(context).get(),
       instance_extensions(context).get()
     )
-    .setPNext(&debug_messenger_info().get()
-      .setPNext(&validation_features().get()))
+    .setPNext(
+      &debug_messenger_info().get()
+      .setPNext(&validation_features().get())
+    )
   );
 }
 
@@ -48,7 +50,6 @@ static int64_t get_physical_device_score(const vk::raii::PhysicalDevice &device)
   }
 
   score += props.limits.maxImageDimension2D;
-
 
   return score;
 }

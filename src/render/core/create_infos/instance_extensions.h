@@ -12,7 +12,7 @@ namespace tge {
   class instance_extensions : public info_template<std::vector<const char *>> {
   public:
     instance_extensions(const vk::raii::Context &ctx) :
-        info_template(get_exts(ctx)) {
+      info_template(get_exts(ctx)) {
     }
 
   private:
