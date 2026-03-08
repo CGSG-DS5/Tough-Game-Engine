@@ -16,7 +16,8 @@ tge::core::core(SDL_Window *window, bool vsync, bool triple_buffer) :
   allocator(create_allocator()),
   swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer)),
   swapchain(create_swapchain()),
-  swapchain_images(create_swapchain_images())
+  swapchain_images(create_swapchain_images()),
+  command_pool(create_command_pool())
 {
 }
 
@@ -148,3 +149,13 @@ void tge::core::resize() {
 
   swapchain_images = create_swapchain_images();
 }
+
+vk::raii::CommandPool tge::core::create_command_pool() {
+  return device.createCommandPool(
+    vk::CommandPoolCreateInfo(
+      vk::CommandPoolCreateFlags(),
+      queue_family_index
+    )
+  );
+}
+

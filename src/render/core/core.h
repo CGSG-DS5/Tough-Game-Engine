@@ -37,6 +37,8 @@ namespace tge {
     vk::raii::SwapchainKHR swapchain;
     std::vector<image> swapchain_images;
 
+    const vk::raii::CommandPool command_pool;
+
     vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();
     vk::raii::PhysicalDevice create_physical_device();
@@ -48,6 +50,8 @@ namespace tge {
     vk::PresentModeKHR get_swapchain_present_mode(const bool vsync, const bool triple_buffer);
     vk::raii::SwapchainKHR create_swapchain();
     std::vector<image> create_swapchain_images();
+
+    vk::raii::CommandPool create_command_pool();
   };
 }
 
