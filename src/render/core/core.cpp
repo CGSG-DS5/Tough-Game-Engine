@@ -112,6 +112,9 @@ vk::PresentModeKHR tge::core::get_swapchain_present_mode(const bool vsync, const
 vk::raii::SwapchainKHR tge::core::create_swapchain() {
   const vk::Extent2D extent = physical_device.getSurfaceCapabilitiesKHR(surface).currentExtent;
 
+  // trick to supress useless vulkan warnings
+  auto tmp = physical_device.getSurfaceFormatsKHR(surface);
+
   return device.createSwapchainKHR(
     swapchain_info(physical_device, surface, extent, swapchain_present_mode).get()
   );
