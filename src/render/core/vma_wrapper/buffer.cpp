@@ -6,7 +6,7 @@
 #include "tge.h"
 
 tge::buffer::buffer(
-  vma_allocator& alloc,
+  vma_allocator &alloc,
   const uint32_t size,
   const VmaMemoryUsage memory_usage,
   const VkBufferUsageFlags buffer_usage
@@ -31,8 +31,8 @@ tge::buffer::buffer(
   }
 }
 
-tge::buffer::buffer(buffer &&other) noexcept
-  : allocator(other.allocator), buf(other.buf), buf_mem(other.buf_mem) {
+tge::buffer::buffer(buffer &&other) noexcept :
+  allocator(other.allocator), buf(other.buf), buf_mem(other.buf_mem) {
   other.buf = VK_NULL_HANDLE;
 }
 

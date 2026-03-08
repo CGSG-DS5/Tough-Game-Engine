@@ -224,7 +224,7 @@ std::vector<const char *> tge::device_extensions::get_exts(vk::PhysicalDevice ph
 
   std::vector<const char *> required_extensions {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME
+    // VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME
   };
 
   std::vector<const char *> required_unsupported = get_unsupported(required_extensions, extension_names);
@@ -260,3 +260,4 @@ uint32_t tge::queue_info::get_family_index(vk::PhysicalDevice device, vk::Surfac
 
   throw core_exception("Could not find queue family with required flags", 30);
 }
+
