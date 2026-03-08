@@ -6,7 +6,7 @@
 #ifndef __tge_vma_allocator_h_
 #define __tge_vma_allocator_h_
 
-#include "def.h"
+#include "buffer.h"
 
 namespace tge {
   class vma_allocator {
@@ -20,9 +20,11 @@ namespace tge {
     vma_allocator(const vma_allocator &) = delete;
     vma_allocator & operator=(const vma_allocator &) = delete;
 
-    vma_allocator(vma_allocator &&other);
+    vma_allocator(vma_allocator &&other) noexcept;
 
     ~vma_allocator();
+
+    operator VmaAllocator();
 
   private:
     VmaAllocator allocator;

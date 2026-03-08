@@ -63,7 +63,7 @@ std::span<const char * const> get_sdl_extensions() {
   const char * const *sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extensions_count);
 
   if (sdl_extensions == nullptr) {
-    throw new tge::core_exception(SDL_GetError(), 30);
+    throw tge::core_exception(SDL_GetError(), 30);
   }
 
   return std::span<const char * const>(sdl_extensions, sdl_extensions_count);
@@ -85,7 +85,7 @@ std::vector<const char *> tge::instance_extensions::get_exts(const vk::raii::Con
 
   // extension not supported
   if (!required_unsupported.empty())
-    throw new core_exception(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
+    throw core_exception(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
 
   std::vector<const char *> all_extentions;
   std::vector<const char *> supported_additional = get_supported(additional_exts, extension_names);
@@ -231,7 +231,7 @@ std::vector<const char *> tge::device_extensions::get_exts(vk::PhysicalDevice ph
 
   // extension not supported
   if (!required_unsupported.empty())
-    throw new core_exception(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
+    throw core_exception(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
 
   return required_extensions;
 }
@@ -258,5 +258,5 @@ uint32_t tge::queue_info::get_family_index(vk::PhysicalDevice device, vk::Surfac
     return queue_family_index;
   }
 
-  throw new core_exception("Could not find queue family with required flags", 30);
+  throw core_exception("Could not find queue family with required flags", 30);
 }

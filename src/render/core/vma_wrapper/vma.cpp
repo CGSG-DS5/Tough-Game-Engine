@@ -21,7 +21,7 @@ tge::vma_allocator::vma_allocator(
   };
 
   if (VkResult code = vmaCreateAllocator(&create_info, &allocator); code != VK_SUCCESS) {
-    throw new core_exception("Could not create memory allocator", code);
+    throw core_exception("Could not create memory allocator", code);
   }
 }
 
@@ -31,8 +31,11 @@ tge::vma_allocator::~vma_allocator() {
   }
 }
 
-tge::vma_allocator::vma_allocator(vma_allocator &&other)
-  : allocator(other.allocator)
-{
+tge::vma_allocator::vma_allocator(vma_allocator &&other) noexcept
+  : allocator(other.allocator) {
   other.allocator = VK_NULL_HANDLE;
+}
+
+tge::vma_allocator::operator VmaAllocator() {
+  return allocator;
 }
