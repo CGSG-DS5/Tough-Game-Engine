@@ -22,6 +22,8 @@ namespace tge {
   public:
     window_handler(const std::string &title, int32_t width, int32_t height);
 
+    ~window_handler();
+
     SDL_Window * get_window_handle();
 
     void run();

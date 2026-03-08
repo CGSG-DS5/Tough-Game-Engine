@@ -80,7 +80,9 @@ void tge::window_handler::run() {
 
     // render()
   }
+}
 
+tge::window_handler::~window_handler() {
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
