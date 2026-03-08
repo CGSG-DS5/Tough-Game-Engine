@@ -15,7 +15,7 @@ int main() {
 
     return err.code();
   } catch (const vk::SystemError &err) {
-    std::cerr << "Vulkan error occured while core initialization" << err.what() << "\n";
+    std::cerr << "Vulkan error occured while core initialization \"" << err.what() << "\"\n";
 
     return err.code().value();
   }

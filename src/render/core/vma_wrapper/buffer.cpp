@@ -22,11 +22,11 @@ tge::buffer::buffer(
     .sharingMode = VK_SHARING_MODE_EXCLUSIVE
   };
 
-  if (
-      VkResult res = vmaCreateBuffer(
-          allocator, &buffer_create_info, &vma_allocation_info,
-          &buf, &buf_mem, VK_NULL_HANDLE
-      ); res != VK_SUCCESS) {
+  if (VkResult res = vmaCreateBuffer(
+      allocator, &buffer_create_info, &vma_allocation_info,
+      &buf, &buf_mem, VK_NULL_HANDLE
+    );
+    res != VK_SUCCESS) {
     throw core_exception(std::format("Could not create buffer with size: {}", size), res);
   }
 }
