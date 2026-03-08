@@ -5,13 +5,15 @@
 
 #include "tge.h"
 
-tge::core::core(SDL_Window *window) :
+tge::core::core(SDL_Window *window, bool vsync, bool triple_buffer) :
     instance(create_instance()),
     debug_messenger(create_debugger()),
     physical_device(create_physical_device()),
     device(create_device(window)),
     queue(create_queue()),
     allocator(create_allocator())
+    //swa
+    //swapchain(create_swapchain())
 {
 }
 
@@ -82,3 +84,9 @@ vk::raii::Queue tge::core::create_queue() {
 tge::vma_allocator tge::core::create_allocator() {
   return vma_allocator(instance, physical_device, device);
 }
+
+//vk::raii::SwapchainKHR tge::core::create_swapchain() {
+//  device.createSwapchainKHR(
+//    swapchain_info(physical_device, surface, 3, 0, 0).get()
+//  );
+//}

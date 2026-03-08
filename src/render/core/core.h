@@ -17,20 +17,22 @@
 namespace tge {
   class core {
   public:
-    core(SDL_Window *window);
+    core(SDL_Window *window, bool vsync, bool triple_buffer);
 
     ~core();
 
   private:
-    vk::raii::Context context {};
+    vk::raii::Context const context {};
 
-    vk::raii::Instance instance;
-    vk::raii::DebugUtilsMessengerEXT debug_messenger;
-    vk::raii::PhysicalDevice physical_device;
+    vk::raii::Instance const instance;
+    vk::raii::DebugUtilsMessengerEXT const debug_messenger;
+    vk::raii::PhysicalDevice const physical_device;
     vk::SurfaceKHR surface;
-    vk::raii::Device device;
-    vk::raii::Queue queue;
-    vma_allocator allocator;
+    vk::raii::Device const device;
+    vk::raii::Queue const queue;
+    vma_allocator const allocator;
+    //uint32_t const num_swapchain_images;
+    //vk::raii::SwapchainKHR swapchain;
 
     vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();
@@ -39,6 +41,7 @@ namespace tge {
     vk::raii::Device create_device(SDL_Window *window);
     vk::raii::Queue create_queue();
     vma_allocator create_allocator();
+    //vk::raii::SwapchainKHR create_swapchain();
   };
 }
 

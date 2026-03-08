@@ -260,3 +260,39 @@ uint32_t tge::queue_info::get_family_index(vk::PhysicalDevice device, vk::Surfac
 
   throw core_exception("Could not find queue family with required flags", 30);
 }
+
+/***
+ * Swapchain info
+ ***/
+
+vk::PresentModeKHR tge::swapchain_info::get_present_mode(
+      vk::PhysicalDevice device, vk::SurfaceKHR surface,
+      const bool vsync, const bool triple_buffer
+) {
+  const std::vector<vk::PresentModeKHR> modes = device.getSurfacePresentModesKHR(surface);
+
+  bool immediate = false, mailbox = false;
+
+  for (const vk::PresentModeKHR mode : modes) {
+    switch (mode) {
+    case vk::PresentModeKHR::eImmediate:
+      immediate = true;
+      break;
+
+    case vk::PresentModeKHR::eMailbox:
+      mailbox = true;
+      break;
+    }
+  }
+
+  if (!vsync) {
+    return immediate ? vk::PresentModeKHR::eImmediate : vk::PresentModeKHR::eFifo;
+  }
+
+  if (triple_buffer) {
+    return mailbox ? vk::PresentModeKHR::eMailbox : vk::PresentModeKHR::eFifo;
+  }
+
+  return vk::PresentModeKHR::eFifo;
+}
+
