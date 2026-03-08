@@ -10,23 +10,42 @@
 
 #include "create_infos/infos.h"
 
-#include "core_exception.h"
+#include "surface.h"
+
+#include "vma_wrapper/vma_allocator.h"
 
 namespace tge {
   class core {
   public:
-    core(const std::span<const char * const> &required_extensions);
+    core(SDL_Window *window, bool vsync, bool triple_buffer);
+
+    void resize();
 
   private:
-    vk::raii::Context context {};
+    const vk::raii::Context context {};
 
-    vk::raii::Instance instance;
-    vk::raii::DebugUtilsMessengerEXT debug_messenger;
-    vk::raii::PhysicalDevice physical_device;
+    const vk::raii::Instance instance;
+    const vk::raii::DebugUtilsMessengerEXT debug_messenger;
+    const vk::raii::PhysicalDevice physical_device;
+    const raii_surface surface;
+    const vk::raii::Device device;
+    const vk::raii::Queue queue;
+    const vma_allocator allocator;
 
-    vk::raii::Instance create_instance(const std::span<const char * const> &required_extensions);
+    const vk::PresentModeKHR swapchain_present_mode;
+    vk::raii::SwapchainKHR swapchain;
+    std::vector<image> swapchain_images;
+
+    vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();
     vk::raii::PhysicalDevice create_physical_device();
+    vk::raii::Device create_device(SDL_Window *window);
+    vk::raii::Queue create_queue();
+    vma_allocator create_allocator();
+
+    vk::PresentModeKHR get_swapchain_present_mode(const bool vsync, const bool triple_buffer);
+    vk::raii::SwapchainKHR create_swapchain();
+    std::vector<image> create_swapchain_images();
   };
 }
 

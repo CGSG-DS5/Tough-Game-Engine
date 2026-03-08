@@ -9,13 +9,13 @@ int main() {
   tge::window_handler window("DD1 Window", 800, 600);
 
   try {
-    tge::core Rnd(tge::window_handler::get_sdl_extensions());
+    tge::core Rnd(window.get_window_handle(), true, true);
   } catch (const tge::core_exception &err) {
-    std::cerr << "Error occured while core initialization" << err.what() << "\n";
+    std::cerr << "Error occured while core initialization \"" << err.what() << "\"\n";
 
     return err.code();
   } catch (const vk::SystemError &err) {
-    std::cerr << "Vulkan error occured while core initialization" << err.what() << "\n";
+    std::cerr << "Vulkan error occured while core initialization \"" << err.what() << "\"\n";
 
     return err.code().value();
   }
