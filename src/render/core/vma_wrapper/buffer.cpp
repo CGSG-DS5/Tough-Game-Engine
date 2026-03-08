@@ -6,7 +6,7 @@
 #include "tge.h"
 
 tge::buffer::buffer(
-  vma_allocator& alloc,
+  vma_allocator &alloc,
   const uint32_t size,
   const VmaMemoryUsage memory_usage,
   const VkBufferUsageFlags buffer_usage

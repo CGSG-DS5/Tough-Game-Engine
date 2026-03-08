@@ -7,6 +7,7 @@
 #define __tge_vma_allocator_h_
 
 #include "buffer.h"
+#include "image.h"
 
 namespace tge {
   class vma_allocator {
@@ -14,7 +15,7 @@ namespace tge {
     vma_allocator(
       const vk::Instance instance,
       const vk::PhysicalDevice physical_device,
-      const vk::Device device
+      const vk::raii::Device &device
     );
 
     vma_allocator(const vma_allocator &) = delete;
@@ -26,7 +27,10 @@ namespace tge {
 
     operator VmaAllocator();
 
+    image create_image(const vk::Image img, const vk::Format fmt);
+
   private:
+    const vk::raii::Device &device;
     VmaAllocator allocator;
   };
 }

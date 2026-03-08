@@ -29,7 +29,7 @@ namespace tge {
     ~buffer();
 
   private:
-    vma_allocator &allocator;
+    vma_allocator & const allocator;
     VkBuffer buf;
     VmaAllocation buf_mem;
   };
