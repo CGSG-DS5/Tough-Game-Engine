@@ -10,7 +10,8 @@ tge::core::core(SDL_Window *window) :
     debug_messenger(create_debugger()),
     physical_device(create_physical_device()),
     device(create_device(window)),
-    queue(create_queue())
+    queue(create_queue()),
+    allocator(create_allocator())
 {
 }
 
@@ -27,6 +28,7 @@ vk::raii::Instance tge::core::create_instance() {
       instance_extensions(context).get()
     )
     .setPNext(&debug_messenger_info().get()
+
       .setPNext(&validation_features().get()))
   );
 }
@@ -47,6 +49,7 @@ static int64_t get_physical_device_score(const vk::raii::PhysicalDevice &device)
   }
 
   score += props.limits.maxImageDimension2D;
+
 
   return score;
 }
@@ -74,4 +77,8 @@ vk::raii::Device tge::core::create_device(SDL_Window *window) {
 
 vk::raii::Queue tge::core::create_queue() {
   return device.getQueue(queue_info(physical_device, surface).get().queueFamilyIndex, 0);
+}
+
+tge::vma_allocator tge::core::create_allocator() {
+  return vma_allocator(instance, physical_device, device);
 }

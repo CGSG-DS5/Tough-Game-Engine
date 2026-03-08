@@ -29,5 +29,6 @@
  ***/
 
 #include <vulkan/vulkan_raii.hpp>
+#include <vma/vk_mem_alloc.h>
 
 #endif  // __tge_def_h_
