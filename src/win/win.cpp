@@ -40,6 +40,7 @@ void tge::window_handler::run() {
       case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
       case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
         on_resize(event.window.data1, event.window.data2);
+        is_fullscreen = false;
         break;
 
       case SDL_EVENT_MOUSE_MOTION:
@@ -61,12 +62,15 @@ void tge::window_handler::run() {
           } else {
             SDL_SetWindowFullscreen(window, true);
           }
+          is_fullscreen = true;
         }
         break;
       }
     }
 
-    on_render();
+    if (!is_fullscreen) {
+      on_render();
+    }
   }
 }
 
