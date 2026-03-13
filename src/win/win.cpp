@@ -5,18 +5,6 @@
 
 #include "tge.h"
 
-void tge::window_handler::on_resize(int32_t wigth, int32_t height) {
-}
-
-void tge::window_handler::on_mouse_motion(int32_t x, int32_t y) {
-}
-
-void tge::window_handler::on_mouse_up(int32_t button, int32_t x, int32_t y) {
-}
-
-void tge::window_handler::on_mouse_down(int32_t button, int32_t x, int32_t y) {
-}
-
 tge::window_handler::window_handler(const std::string &title, int32_t width, int32_t height) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     error = 1;
@@ -52,6 +40,7 @@ void tge::window_handler::run() {
       case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
       case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
         on_resize(event.window.data1, event.window.data2);
+        is_fullscreen = false;
         break;
 
       case SDL_EVENT_MOUSE_MOTION:
@@ -73,14 +62,19 @@ void tge::window_handler::run() {
           } else {
             SDL_SetWindowFullscreen(window, true);
           }
+          is_fullscreen = true;
         }
         break;
       }
     }
 
-    // render()
+    if (!is_fullscreen) {
+      on_render();
+    }
   }
+}
 
+tge::window_handler::~window_handler() {
   SDL_DestroyWindow(window);
   SDL_Quit();
 }

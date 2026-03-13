@@ -8,7 +8,7 @@
 
 #include "def.h"
 
-#include "render/core/core.h"
+#include "render/render.h"
 #include "win/win.h"
 
 #endif  // __tge_h_

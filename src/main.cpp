@@ -6,10 +6,8 @@
 #include "tge.h"
 
 int main() {
-  tge::window_handler window("DD1 Window", 800, 600);
-
   try {
-    tge::core Rnd(window.get_window_handle(), true, true);
+    tge::render Rnd(true, true);
   } catch (const tge::core_exception &err) {
     std::cerr << "Error occured while core initialization \"" << err.what() << "\"\n";
 
@@ -19,8 +17,6 @@ int main() {
 
     return err.code().value();
   }
-
-  window.run();
 
   return 0;
 }
