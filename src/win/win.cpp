@@ -66,7 +66,7 @@ void tge::window_handler::run() {
       }
     }
 
-    // render()
+    on_render();
   }
 }
 

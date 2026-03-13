@@ -11,6 +11,12 @@ tge::render::render(bool vsync, bool triple_buffer) :
   run();
 }
 
+void tge::render::on_render() {
+  core::frame_start();
+
+  core::frame_end();
+}
+
 void tge::render::on_resize(int32_t wigth, int32_t height) {
   core::resize();
 }
