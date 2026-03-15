@@ -108,38 +108,6 @@ foreach(SHADER_REL_PATH ${SHADER_SOURCES})
     )
 endforeach()
 
-function(add_shader_target TARGET_NAME SHADER_SOURCE)
-    cmake_path(ABSOLUTE_PATH SHADER_SOURCE NORMALIZE OUTPUT_VARIABLE SHADER_ABS)
-    cmake_path(GET SHADER_SOURCE STEM LAST_ONLY BASENAME)
-
-    set(OUTPUT_SPV ${CMAKE_CURRENT_BINARY_DIR}/${BASENAME}.spv)
-    set(DEPFILE_D   ${CMAKE_CURRENT_BINARY_DIR}/${BASENAME}.d)
-
-    get_target_property(INC_DIRS ${TARGET_NAME} INCLUDE_DIRECTORIES)
-    set(INC_FLAGS "")
-    foreach(DIR ${INC_DIRS})
-        list(APPEND INC_FLAGS "-I" ${DIR})
-    endforeach()
-
-    add_custom_command(
-        OUTPUT ${OUTPUT_SPV}
-        COMMAND Vulkan::glslc
-            -MD -MF ${DEPFILE_D}
-            -o ${OUTPUT_SPV}
-            ${INC_FLAGS}
-            ${SHADER_ABS}
-        DEPENDS ${SHADER_ABS}
-        DEPFILE ${DEPFILE_D}
-        COMMENT "Compiling ${BASENAME} -> SPIR-V"
-        VERBATIM
-    )
-
-    add_custom_target(${BASENAME}_target DEPENDS ${OUTPUT_SPV})
-    add_dependencies(${TARGET_NAME} ${BASENAME}_target)
-endfunction()
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/shaders/include)
-
 add_custom_target(CompileShaders DEPENDS ${SHADER_SPV_FILES})
 add_dependencies(${PROJECT_NAME} CompileShaders)
 
