@@ -22,6 +22,10 @@ find_package(Vulkan REQUIRED)
 add_executable(${PROJECT_NAME})
 add_subdirectory(src)
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL3::SDL3
     Vulkan::Vulkan
@@ -53,7 +57,7 @@ file(GLOB_RECURSE SHADER_SOURCES
 )
 
 foreach(SHADER_REL_PATH ${SHADER_SOURCES})
-    if(SHADER_REL_PATH MATCHES "^include/.*" OR IS_DIRECTORY ${SHADER_SRC_DIR}/${SHADER_REL_PATH})
+    if(SHADER_REL_PATH MATCHES "^include/.*")
       continue()
     endif()
 
@@ -89,12 +93,52 @@ foreach(SHADER_REL_PATH ${SHADER_SOURCES})
 
     add_custom_command(
         OUTPUT ${SPV_FILE}
-        COMMAND glslc -fshader-stage=${SPV_STAGE} ${SHADER_FILE} --target-spv=spv1.4 -I ${SHADER_SRC_DIR}/include -o ${SPV_FILE} #> ${SHADER_OUTPUT_DIR}/compile.log 2>&1
+        COMMAND Vulkan::glslc
+            -MD -MF ${SPV_FILE}.d
+            -fshader-stage=${SPV_STAGE}
+            ${SHADER_FILE}
+            --target-spv=spv1.4
+            -I ${SHADER_SRC_DIR}/include
+            -o ${SPV_FILE}
+            #> ${SHADER_OUTPUT_DIR}/compile.log 2>&1
         DEPENDS ${SHADER_FILE}
+        DEPFILE ${SPV_FILE}.d 
         COMMENT "Compiling ${SHADER_REL_PATH} to SPIR-V"
         VERBATIM
     )
 endforeach()
+
+function(add_shader_target TARGET_NAME SHADER_SOURCE)
+    cmake_path(ABSOLUTE_PATH SHADER_SOURCE NORMALIZE OUTPUT_VARIABLE SHADER_ABS)
+    cmake_path(GET SHADER_SOURCE STEM LAST_ONLY BASENAME)
+
+    set(OUTPUT_SPV ${CMAKE_CURRENT_BINARY_DIR}/${BASENAME}.spv)
+    set(DEPFILE_D   ${CMAKE_CURRENT_BINARY_DIR}/${BASENAME}.d)
+
+    get_target_property(INC_DIRS ${TARGET_NAME} INCLUDE_DIRECTORIES)
+    set(INC_FLAGS "")
+    foreach(DIR ${INC_DIRS})
+        list(APPEND INC_FLAGS "-I" ${DIR})
+    endforeach()
+
+    add_custom_command(
+        OUTPUT ${OUTPUT_SPV}
+        COMMAND Vulkan::glslc
+            -MD -MF ${DEPFILE_D}
+            -o ${OUTPUT_SPV}
+            ${INC_FLAGS}
+            ${SHADER_ABS}
+        DEPENDS ${SHADER_ABS}
+        DEPFILE ${DEPFILE_D}
+        COMMENT "Compiling ${BASENAME} -> SPIR-V"
+        VERBATIM
+    )
+
+    add_custom_target(${BASENAME}_target DEPENDS ${OUTPUT_SPV})
+    add_dependencies(${TARGET_NAME} ${BASENAME}_target)
+endfunction()
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/shaders/include)
 
 add_custom_target(CompileShaders DEPENDS ${SHADER_SPV_FILES})
 add_dependencies(${PROJECT_NAME} CompileShaders)
