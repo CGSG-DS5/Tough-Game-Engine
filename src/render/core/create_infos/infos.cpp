@@ -92,9 +92,8 @@ std::vector<const char *> tge::instance_extensions::get_exts(const vk::raii::Con
   all_extentions.insert(all_extentions.end(), supported_additional.begin(), supported_additional.end());
   all_extentions.insert(all_extentions.end(), required_exts.begin(), required_exts.end());
 
-#ifdef VALIDATION
+  if (!layers(ctx).get().empty())
     all_extentions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
-#endif  // VALIDATION
 
   return all_extentions;
 }
