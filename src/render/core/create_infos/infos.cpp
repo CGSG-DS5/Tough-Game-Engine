@@ -196,7 +196,9 @@ const std::vector<vk::ValidationFeatureEnableEXT> tge::validation_features::enab
 
 std::vector<const char *> tge::layers::get_layers(const vk::raii::Context &ctx) {
   std::vector<const char *> required {
+#ifdef VALIDATION
     "VK_LAYER_KHRONOS_validation"
+#endif  // VALIDATION
   };
 
   std::vector<vk::LayerProperties> layer_properties = ctx.enumerateInstanceLayerProperties();

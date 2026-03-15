@@ -36,11 +36,7 @@ vk::raii::Instance tge::core::create_instance() {
     vk::InstanceCreateInfo(
       vk::InstanceCreateFlags(),
       &application_info().get(),
-#ifdef VALIDATION
       layers(context).get(),
-#else  // VALIDATION
-      {},
-#endif  // VALIDATION
       instance_extensions(context).get()
     )
 #ifdef VALIDATION
