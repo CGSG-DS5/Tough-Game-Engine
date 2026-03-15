@@ -31,7 +31,7 @@
       }
     },
     {
-      "name": "x64-Relase-Validation",
+      "name": "x64-Release-Validation",
       "description": "Release with vulkan validation build",
       "generator": "Ninja",
       "inherits": "base",
