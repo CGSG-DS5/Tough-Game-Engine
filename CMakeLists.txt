@@ -34,6 +34,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Debug>:DEBUG>
+    $<$<CONFIG:Debug>:VALIDATION>
+    $<$<CONFIG:RelWithDebInfo>:VALIDATION>
 )
 
 if (WIN32 AND TARGET SDL3::SDL3-shared)

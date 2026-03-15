@@ -36,20 +36,30 @@ vk::raii::Instance tge::core::create_instance() {
     vk::InstanceCreateInfo(
       vk::InstanceCreateFlags(),
       &application_info().get(),
+#ifdef VALIDATION
       layers(context).get(),
+#else  // VALIDATION
+      {},
+#endif  // VALIDATION
       instance_extensions(context).get()
     )
+#ifdef VALIDATION
     .setPNext(
       &debug_messenger_info().get()
       .setPNext(&validation_features().get())
     )
+#endif  // VALIDATION
   );
 }
 
 vk::raii::DebugUtilsMessengerEXT tge::core::create_debugger() {
+#ifdef VALIDATION
   return instance.createDebugUtilsMessengerEXT(
     debug_messenger_info().get()
   );
+#else  // VALIDATION
+  return nullptr;
+#endif  // VALIDATION
 }
 
 static int64_t get_physical_device_score(const vk::raii::PhysicalDevice &device) {
