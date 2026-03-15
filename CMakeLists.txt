@@ -19,13 +19,8 @@ find_package(SDL3 REQUIRED CONFIG)
 
 find_package(Vulkan REQUIRED)
 
-add_executable(${PROJECT_NAME} "src/main.cpp" "src/win/win.cpp" "src/render/core/core.cpp" "src/render/core/core_exception.h"    "src/render/core/create_infos/application_info.h" "src/render/core/create_infos/infos.h" "src/render/core/create_infos/layers.h" "src/render/core/create_infos/info_template.h" "src/render/core/create_infos/instance_extensions.h" "src/render/core/create_infos/debug_messenger_info.h" "src/render/core/create_infos/infos.cpp" "src/render/core/create_infos/validation_features.h" "src/render/core/create_infos/device_extensions.h" "src/render/core/create_infos/queue_info.h" "src/render/core/vma_wrapper/vma_allocator.h" "src/render/core/vma_wrapper/vma.cpp" "src/render/core/vma_wrapper/buffer.h" "src/render/core/vma_wrapper/buffer.cpp" "src/render/core/create_infos/swapchain_info.h" "src/render/core/vma_wrapper/image.h" "src/render/core/vma_wrapper/image.cpp" "src/render/core/surface.h" "src/render/core/surface.cpp" "src/render/render.h" "src/render/render.cpp"   )
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
-target_precompile_headers(${PROJECT_NAME} PRIVATE [["tge.h"]])
+add_executable(${PROJECT_NAME})
+add_subdirectory(src)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL3::SDL3
@@ -34,6 +29,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Debug>:DEBUG>
+    $<$<CONFIG:Debug>:VALIDATION>
+    $<$<CONFIG:RelWithDebInfo>:VALIDATION>
 )
 
 if (WIN32 AND TARGET SDL3::SDL3-shared)
@@ -43,3 +40,4 @@ if (WIN32 AND TARGET SDL3::SDL3-shared)
             $<TARGET_FILE_DIR:${PROJECT_NAME}>
     )
 endif()
+

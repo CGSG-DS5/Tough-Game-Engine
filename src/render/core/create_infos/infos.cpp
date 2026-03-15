@@ -92,9 +92,8 @@ std::vector<const char *> tge::instance_extensions::get_exts(const vk::raii::Con
   all_extentions.insert(all_extentions.end(), supported_additional.begin(), supported_additional.end());
   all_extentions.insert(all_extentions.end(), required_exts.begin(), required_exts.end());
 
-  if (!layers(ctx).get().empty()) {
+  if (!layers(ctx).get().empty())
     all_extentions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
-  }
 
   return all_extentions;
 }
@@ -196,7 +195,9 @@ const std::vector<vk::ValidationFeatureEnableEXT> tge::validation_features::enab
 
 std::vector<const char *> tge::layers::get_layers(const vk::raii::Context &ctx) {
   std::vector<const char *> required {
+#ifdef VALIDATION
     "VK_LAYER_KHRONOS_validation"
+#endif  // VALIDATION
   };
 
   std::vector<vk::LayerProperties> layer_properties = ctx.enumerateInstanceLayerProperties();
