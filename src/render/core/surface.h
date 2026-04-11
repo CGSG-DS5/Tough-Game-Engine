@@ -9,16 +9,16 @@
 #include "core_exception.h"
 
 namespace tge {
-  class raii_surface {
+  class RaiiSurface {
   public:
-    raii_surface(vk::Instance instance, SDL_Window *Window);
+    RaiiSurface(vk::Instance instance, SDL_Window *Window);
 
-    raii_surface(const raii_surface &) = delete;
-    raii_surface & operator=(const raii_surface &) = delete;
+    RaiiSurface(const RaiiSurface &) = delete;
+    RaiiSurface &operator=(const RaiiSurface &) = delete;
 
-    raii_surface(raii_surface &&other) noexcept;
+    RaiiSurface(RaiiSurface &&other) noexcept;
 
-    ~raii_surface();
+    ~RaiiSurface();
 
     operator vk::SurfaceKHR() const;
 
@@ -26,6 +26,6 @@ namespace tge {
     vk::Instance instance;
     VkSurfaceKHR surface;
   };
-}
+} // namespace tge
 
-#endif  // __tge_surface_h_
+#endif // __tge_surface_h_

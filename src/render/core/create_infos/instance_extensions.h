@@ -9,17 +9,16 @@
 #include "def.h"
 
 namespace tge {
-  class instance_extensions : public info_template<std::vector<const char *>> {
+  class InstanceExtensions : public InfoTemplate<std::vector<const char *>> {
   public:
-    instance_extensions(const vk::raii::Context &ctx) :
-      info_template(get_exts(ctx)) {
-    }
+    InstanceExtensions(const vk::raii::Context &ctx)
+        : InfoTemplate(get_exts(ctx)) {}
 
   private:
     static const std::vector<const char *> additional_exts;
 
     static std::vector<const char *> get_exts(const vk::raii::Context &ctx);
   };
-}
+} // namespace tge
 
-#endif  // __tge_instance_extensions_
+#endif // __tge_instance_extensions_

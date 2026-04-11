@@ -15,20 +15,19 @@
 #endif /* VK_API_VERSION_1_4 */
 
 namespace tge {
-  class application_info : public info_template<vk::ApplicationInfo> {
+  class ApplicationInfo : public InfoTemplate<vk::ApplicationInfo> {
   public:
-    application_info() :
-      info_template(
-        "Tough Game Engine Application",
-        vk::makeApiVersion(0, 0, 1, 0),
-        "Tough Game Engine",
-        vk::makeApiVersion(0, 0, 1, 0),
-        CURRENT_VULKAN_VERSION
-      )
-    {}
+    ApplicationInfo()
+        : InfoTemplate(
+              "Tough Game Engine Application",
+              vk::makeApiVersion(0, 0, 1, 0),
+              "Tough Game Engine",
+              vk::makeApiVersion(0, 0, 1, 0),
+              CURRENT_VULKAN_VERSION
+          ) {}
   };
-}
+} // namespace tge
 
 #undef CURRENT_VULKAN_VERSION
 
-#endif  // __tge_application_info_
+#endif // __tge_application_info_

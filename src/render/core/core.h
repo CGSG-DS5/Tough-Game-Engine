@@ -11,10 +11,10 @@
 #include "vma_wrapper/vma_allocator.h"
 
 namespace tge {
-  class core {
+  class Core {
   public:
-    core(SDL_Window *window, bool vsync, bool triple_buffer);
-    ~core();
+    Core(SDL_Window *window, bool vsync, bool triple_buffer);
+    ~Core();
 
     void resize();
 
@@ -22,23 +22,23 @@ namespace tge {
     void frame_end();
 
   private:
-    const vk::raii::Context context {};
+    const vk::raii::Context context{};
 
     const vk::raii::Instance instance;
     const vk::raii::DebugUtilsMessengerEXT debug_messenger;
     const vk::raii::PhysicalDevice physical_device;
-    const raii_surface surface;
+    const RaiiSurface surface;
     const vk::raii::Device device;
     const uint32_t device_present_mask;
     const uint32_t queue_family_index;
     const vk::raii::Queue queue;
-    const vma_allocator allocator;
+    const MemoryAllocator allocator;
 
     vk::Extent2D screen_size;
     const vk::PresentModeKHR swapchain_present_mode;
     const uint32_t frames_in_fligt_num;
     vk::raii::SwapchainKHR swapchain;
-    std::vector<image> swapchain_images;
+    std::vector<Image> swapchain_images;
 
     const vk::raii::CommandPool command_pool;
     const vk::raii::DescriptorPool descriptor_pool;
@@ -48,8 +48,8 @@ namespace tge {
     const std::vector<vk::raii::Semaphore> render_finished_semaphores;
     const std::vector<vk::raii::CommandBuffer> render_command_buffers;
 
-    uint32_t frame_index {};
-    uint32_t image_index {};
+    uint32_t frame_index{};
+    uint32_t image_index{};
 
     vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();
@@ -57,11 +57,11 @@ namespace tge {
     vk::raii::Device create_device(SDL_Window *window);
     uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();
-    vma_allocator create_allocator();
+    MemoryAllocator create_allocator();
 
     vk::PresentModeKHR get_swapchain_present_mode(const bool vsync, const bool triple_buffer);
     vk::raii::SwapchainKHR create_swapchain();
-    std::vector<image> create_swapchain_images();
+    std::vector<Image> create_swapchain_images();
 
     vk::raii::CommandPool create_command_pool();
     vk::raii::DescriptorPool create_descriptor_pool();
@@ -70,6 +70,6 @@ namespace tge {
     std::vector<vk::raii::Semaphore> create_semaphores();
     std::vector<vk::raii::CommandBuffer> create_command_buffers();
   };
-}
+} // namespace tge
 
-#endif  // __tge_core_h_
+#endif // __tge_core_h_
