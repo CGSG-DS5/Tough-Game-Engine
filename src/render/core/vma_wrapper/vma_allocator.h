@@ -10,29 +10,29 @@
 #include "image.h"
 
 namespace tge {
-  class vma_allocator {
+  class MemoryAllocator {
   public:
-    vma_allocator(
-      const vk::Instance instance,
-      const vk::PhysicalDevice physical_device,
-      const vk::raii::Device &device
+    MemoryAllocator(
+        const vk::Instance instance,
+        const vk::PhysicalDevice physical_device,
+        const vk::raii::Device &device
     );
 
-    vma_allocator(const vma_allocator &) = delete;
-    vma_allocator & operator=(const vma_allocator &) = delete;
+    MemoryAllocator(const MemoryAllocator &) = delete;
+    MemoryAllocator &operator=(const MemoryAllocator &) = delete;
 
-    vma_allocator(vma_allocator &&other) noexcept;
+    MemoryAllocator(MemoryAllocator &&other) noexcept;
 
-    ~vma_allocator();
+    ~MemoryAllocator();
 
     operator VmaAllocator() const;
 
-    image create_image(const vk::Image img, const vk::Format fmt);
+    Image create_image(const vk::Image img, const vk::Format fmt);
 
   private:
     const vk::raii::Device &device;
     VmaAllocator allocator;
   };
-}
+} // namespace tge
 
-#endif  // __tge_vma_allocator_h_
+#endif // __tge_vma_allocator_h_

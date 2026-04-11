@@ -9,15 +9,14 @@
 #include "def.h"
 
 namespace tge {
-  class validation_features : public info_template<vk::ValidationFeaturesEXT> {
+  class ValidationFeatures : public InfoTemplate<vk::ValidationFeaturesEXT> {
   public:
-    validation_features() :
-      info_template(enabled_features)
-    {}
+    ValidationFeatures()
+        : InfoTemplate(enabled_features) {}
 
   private:
     static const std::vector<vk::ValidationFeatureEnableEXT> enabled_features;
   };
-}
+} // namespace tge
 
-#endif  // __tge_validation_features_
+#endif // __tge_validation_features_

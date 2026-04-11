@@ -9,13 +9,13 @@
 #include "def.h"
 
 namespace tge {
-  class core_exception : public std::exception {
+  class CoreException : public std::exception {
   public:
-    core_exception(const std::string &msg, const int32_t code) noexcept :
-      message(msg), error_code(code)  {
-    }
+    CoreException(const std::string &msg, const int32_t code) noexcept
+        : message(msg)
+        , error_code(code) {}
 
-    const char * what() const noexcept override {
+    const char *what() const noexcept override {
       return message.c_str();
     }
 
@@ -27,6 +27,6 @@ namespace tge {
     const std::string message;
     const int error_code;
   };
-}
+} // namespace tge
 
-#endif  // __tge_core_excetpion_
+#endif // __tge_core_excetpion_

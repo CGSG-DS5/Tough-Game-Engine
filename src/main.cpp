@@ -7,8 +7,8 @@
 
 int main() {
   try {
-    tge::render Rnd(true, true);
-  } catch (const tge::core_exception &err) {
+    tge::Render Rnd(true, true);
+  } catch (const tge::CoreException &err) {
     std::cerr << "Error occured while core initialization \"" << err.what() << "\"\n";
 
     return err.code();
