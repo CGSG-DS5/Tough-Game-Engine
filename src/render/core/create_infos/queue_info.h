@@ -9,20 +9,15 @@
 #include "info_template.h"
 
 namespace tge {
-  class queue_info : public info_template<vk::DeviceQueueCreateInfo> {
+  class QueueInfo : public InfoTemplate<vk::DeviceQueueCreateInfo> {
   public:
-    queue_info(vk::PhysicalDevice device, vk::SurfaceKHR surface) :
-      info_template(
-        vk::DeviceQueueCreateFlags(),
-        get_family_index(device, surface),
-        priority
-      )
-    {}
+    QueueInfo(vk::PhysicalDevice device, vk::SurfaceKHR surface)
+        : InfoTemplate(vk::DeviceQueueCreateFlags(), get_family_index(device, surface), priority) {}
 
   private:
     static const std::vector<float> priority;
     uint32_t get_family_index(vk::PhysicalDevice device, vk::SurfaceKHR surface);
   };
-}
+} // namespace tge
 
-#endif  // __tge_queue_info_
+#endif // __tge_queue_info_

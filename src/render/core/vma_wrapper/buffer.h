@@ -10,29 +10,29 @@
 
 namespace tge {
   /* Forward declaration */
-  class vma_allocator;
+  class MemoryAllocator;
 
-  class buffer {
+  class Buffer {
   public:
-    buffer(
-      vma_allocator &alloc,
-      const uint32_t size,
-      const VmaMemoryUsage memory_usage,
-      const VkBufferUsageFlags buffer_usage
+    Buffer(
+        MemoryAllocator &alloc,
+        const uint32_t size,
+        const VmaMemoryUsage memory_usage,
+        const VkBufferUsageFlags buffer_usage
     );
 
-    buffer(const buffer &) = delete;
-    buffer & operator=(const buffer &) = delete;
+    Buffer(const Buffer &) = delete;
+    Buffer &operator=(const Buffer &) = delete;
 
-    buffer(buffer &&other) noexcept;
+    Buffer(Buffer &&other) noexcept;
 
-    ~buffer();
+    ~Buffer();
 
   private:
-    vma_allocator &allocator;
+    MemoryAllocator &allocator;
     VkBuffer buf;
     VmaAllocation buf_mem;
   };
-}
+} // namespace tge
 
-#endif  // __tge_buffer_h_
+#endif // __tge_buffer_h_

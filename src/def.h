@@ -28,7 +28,7 @@
  * Vulkan Support
  ***/
 
-#include <vulkan/vulkan_raii.hpp>
 #include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan_raii.hpp>
 
-#endif  // __tge_def_h_
+#endif // __tge_def_h_

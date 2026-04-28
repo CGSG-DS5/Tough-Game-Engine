@@ -5,27 +5,24 @@
 
 #include "tge.h"
 
-tge::render::render(bool vsync, bool triple_buffer) :
-  window_handler("Tough Game Engine", 800, 600),
-  core(get_window_handle(), vsync, triple_buffer) {
+tge::Render::Render(bool vsync, bool triple_buffer)
+    : WindowHandler("Tough Game Engine", 800, 600)
+    , Core(get_window_handle(), vsync, triple_buffer) {
   run();
 }
 
-void tge::render::on_render() {
-  core::frame_start();
+void tge::Render::on_render() {
+  Core::frame_start();
 
-  core::frame_end();
+  Core::frame_end();
 }
 
-void tge::render::on_resize(int32_t wigth, int32_t height) {
-  core::resize();
+void tge::Render::on_resize(int32_t wigth, int32_t height) {
+  Core::resize();
 }
 
-void tge::render::on_mouse_motion(int32_t x, int32_t y) {
-}
+void tge::Render::on_mouse_motion(int32_t x, int32_t y) {}
 
-void tge::render::on_mouse_up(int32_t button, int32_t x, int32_t y) {
-}
+void tge::Render::on_mouse_up(int32_t button, int32_t x, int32_t y) {}
 
-void tge::render::on_mouse_down(int32_t button, int32_t x, int32_t y) {
-}
+void tge::Render::on_mouse_down(int32_t button, int32_t x, int32_t y) {}
