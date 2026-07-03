@@ -9,12 +9,12 @@
  * Common functions
  ***/
 
-std::vector<const char *>
-tge::get_supported(const std::span<const char *const> &required, const std::span<const char *const> &supported) {
-  std::vector<const char *> result;
+std::vector<const char*>
+tge::get_supported(const std::span<const char* const>& required, const std::span<const char* const>& supported) {
+  std::vector<const char*> result;
 
-  for (const char *const extension_name : required) {
-    if (std::ranges::any_of(supported, [extension_name](const char *const name) -> bool {
+  for (const char* const extension_name : required) {
+    if (std::ranges::any_of(supported, [extension_name](const char* const name) -> bool {
           return strcmp(extension_name, name) == 0;
         })) {
       result.push_back(extension_name);
@@ -25,12 +25,12 @@ tge::get_supported(const std::span<const char *const> &required, const std::span
   return result;
 }
 
-std::vector<const char *>
-tge::get_unsupported(const std::span<const char *const> &required, const std::span<const char *const> &supported) {
-  std::vector<const char *> result;
+std::vector<const char*>
+tge::get_unsupported(const std::span<const char* const>& required, const std::span<const char* const>& supported) {
+  std::vector<const char*> result;
 
-  for (const char *const extension_name : required) {
-    if (std::ranges::none_of(supported, [extension_name](const char *const name) -> bool {
+  for (const char* const extension_name : required) {
+    if (std::ranges::none_of(supported, [extension_name](const char* const name) -> bool {
           return strcmp(extension_name, name) == 0;
         })) {
       result.push_back(extension_name);
@@ -44,40 +44,40 @@ tge::get_unsupported(const std::span<const char *const> &required, const std::sp
  * Instance extensions
  ***/
 
-const std::vector<const char *> tge::InstanceExtensions::additional_exts{VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
+const std::vector<const char*> tge::InstanceExtensions::additional_exts{VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
 
-std::span<const char *const> get_sdl_extensions() {
+std::span<const char* const> get_sdl_extensions() {
   uint32_t sdl_extensions_count = 0;
-  const char *const *sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extensions_count);
+  const char* const* sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extensions_count);
 
   if (sdl_extensions == nullptr) {
     throw tge::CoreException(SDL_GetError(), 30);
   }
 
-  return std::span<const char *const>(sdl_extensions, sdl_extensions_count);
+  return std::span<const char* const>(sdl_extensions, sdl_extensions_count);
 }
 
-std::vector<const char *> tge::InstanceExtensions::get_exts(const vk::raii::Context &ctx) {
-  std::span<const char *const> required_exts = get_sdl_extensions();
+std::vector<const char*> tge::InstanceExtensions::get_exts(const vk::raii::Context& ctx) {
+  std::span<const char* const> required_exts = get_sdl_extensions();
 
   /* Check extensions */
   std::vector<vk::ExtensionProperties> extension_properties = ctx.enumerateInstanceExtensionProperties();
-  std::vector<const char *> extension_names;
+  std::vector<const char*> extension_names;
   extension_names.reserve(extension_properties.size());
 
-  for (const vk::ExtensionProperties &props : extension_properties) {
+  for (const vk::ExtensionProperties& props : extension_properties) {
     extension_names.push_back(props.extensionName);
   }
 
-  std::vector<const char *> required_unsupported = get_unsupported(required_exts, extension_names);
+  std::vector<const char*> required_unsupported = get_unsupported(required_exts, extension_names);
 
   // extension not supported
   if (!required_unsupported.empty()) {
     throw CoreException(std::string("Unsuported extension required: ") + required_unsupported.front(), 30);
   }
 
-  std::vector<const char *> all_extentions;
-  std::vector<const char *> supported_additional = get_supported(additional_exts, extension_names);
+  std::vector<const char*> all_extentions;
+  std::vector<const char*> supported_additional = get_supported(additional_exts, extension_names);
   all_extentions.insert(all_extentions.end(), supported_additional.begin(), supported_additional.end());
   all_extentions.insert(all_extentions.end(), required_exts.begin(), required_exts.end());
 
@@ -123,8 +123,8 @@ static void set_console_color(const console_rgb rgb) {
 VKAPI_ATTR VkBool32 VKAPI_CALL tge::DebugMessengerInfo::debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-    void *pUserData
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData
 ) {
   std::string msg;
 
@@ -181,18 +181,18 @@ const std::vector<vk::ValidationFeatureEnableEXT> tge::ValidationFeatures::enabl
  * Layers
  ***/
 
-std::vector<const char *> tge::Layers::get_layers(const vk::raii::Context &ctx) {
-  std::vector<const char *> required{
+std::vector<const char*> tge::Layers::get_layers(const vk::raii::Context& ctx) {
+  std::vector<const char*> required{
 #ifdef VALIDATION
       "VK_LAYER_KHRONOS_validation"
 #endif // VALIDATION
   };
 
   std::vector<vk::LayerProperties> layer_properties = ctx.enumerateInstanceLayerProperties();
-  std::vector<const char *> layer_names;
+  std::vector<const char*> layer_names;
   layer_names.reserve(layer_properties.size());
 
-  for (const vk::LayerProperties &props : layer_properties) {
+  for (const vk::LayerProperties& props : layer_properties) {
     layer_names.push_back(props.layerName);
   }
 
@@ -202,21 +202,21 @@ std::vector<const char *> tge::Layers::get_layers(const vk::raii::Context &ctx) 
 /***
  * Device extensions
  ***/
-std::vector<const char *> tge::DeviceExtensions::get_exts(vk::PhysicalDevice phys_device) {
+std::vector<const char*> tge::DeviceExtensions::get_exts(vk::PhysicalDevice phys_device) {
   std::vector<vk::ExtensionProperties> extension_properties = phys_device.enumerateDeviceExtensionProperties();
-  std::vector<const char *> extension_names;
+  std::vector<const char*> extension_names;
   extension_names.reserve(extension_properties.size());
 
-  for (const vk::ExtensionProperties &props : extension_properties) {
+  for (const vk::ExtensionProperties& props : extension_properties) {
     extension_names.push_back(props.extensionName);
   }
 
-  std::vector<const char *> required_extensions{
+  std::vector<const char*> required_extensions{
       VK_KHR_SWAPCHAIN_EXTENSION_NAME,
       // VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME
   };
 
-  std::vector<const char *> required_unsupported = get_unsupported(required_extensions, extension_names);
+  std::vector<const char*> required_unsupported = get_unsupported(required_extensions, extension_names);
 
   // extension not supported
   if (!required_unsupported.empty()) {
@@ -236,7 +236,7 @@ uint32_t tge::QueueInfo::get_family_index(vk::PhysicalDevice device, vk::Surface
   std::vector<vk::QueueFamilyProperties> props = device.getQueueFamilyProperties();
 
   int32_t queue_family_index = -1;
-  for (const vk::QueueFamilyProperties &prop : props) {
+  for (const vk::QueueFamilyProperties& prop : props) {
     queue_family_index++;
 
     if (!(prop.queueFlags & vk::QueueFlagBits::eGraphics)) {

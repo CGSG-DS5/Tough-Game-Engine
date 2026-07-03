@@ -9,15 +9,15 @@
 #include "def.h"
 
 namespace tge {
-  class DeviceExtensions : public InfoTemplate<std::vector<const char *>> {
+  class DeviceExtensions : public InfoTemplate<std::vector<const char*>> {
   public:
     DeviceExtensions(vk::PhysicalDevice phys_device)
         : InfoTemplate(get_exts(phys_device)) {}
 
   private:
-    static const std::vector<const char *> additional_exts;
+    static const std::vector<const char*> additional_exts;
 
-    static std::vector<const char *> get_exts(vk::PhysicalDevice phys_device);
+    static std::vector<const char*> get_exts(vk::PhysicalDevice phys_device);
   };
 } // namespace tge
 

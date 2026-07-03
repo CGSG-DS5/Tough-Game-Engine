@@ -11,16 +11,16 @@
 namespace tge {
   class WindowHandler {
   public:
-    WindowHandler(const std::string &title, int32_t width, int32_t height);
+    WindowHandler(const std::string& title, int32_t width, int32_t height);
 
     ~WindowHandler();
 
-    SDL_Window *get_window_handle();
+    SDL_Window* get_window_handle();
 
     void run();
 
   private:
-    SDL_Window *window{};
+    SDL_Window* window{};
     int32_t error{};
     bool is_fullscreen{};
 

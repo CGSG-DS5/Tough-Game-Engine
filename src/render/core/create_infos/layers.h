@@ -9,13 +9,13 @@
 #include "def.h"
 
 namespace tge {
-  class Layers : public InfoTemplate<std::vector<const char *>> {
+  class Layers : public InfoTemplate<std::vector<const char*>> {
   public:
-    Layers(const vk::raii::Context &ctx)
+    Layers(const vk::raii::Context& ctx)
         : InfoTemplate(get_layers(ctx)) {}
 
   private:
-    std::vector<const char *> get_layers(const vk::raii::Context &ctx);
+    std::vector<const char*> get_layers(const vk::raii::Context& ctx);
   };
 } // namespace tge
 

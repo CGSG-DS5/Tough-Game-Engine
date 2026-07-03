@@ -13,7 +13,7 @@
 namespace tge {
   class Core {
   public:
-    Core(SDL_Window *window, bool vsync, bool triple_buffer);
+    Core(SDL_Window* window, bool vsync, bool triple_buffer);
     ~Core();
 
     void resize();
@@ -54,7 +54,7 @@ namespace tge {
     vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();
     vk::raii::PhysicalDevice create_physical_device();
-    vk::raii::Device create_device(SDL_Window *window);
+    vk::raii::Device create_device(SDL_Window* window);
     uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();
     MemoryAllocator create_allocator();

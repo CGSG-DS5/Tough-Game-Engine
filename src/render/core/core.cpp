@@ -5,7 +5,7 @@
 
 #include "tge.h"
 
-tge::Core::Core(SDL_Window *window, bool vsync, bool triple_buffer)
+tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     : instance(create_instance())
     , debug_messenger(create_debugger())
     , physical_device(create_physical_device())
@@ -32,15 +32,14 @@ tge::Core::~Core() {
 }
 
 vk::raii::Instance tge::Core::create_instance() {
-  return context.createInstance(
-      vk::InstanceCreateInfo(
-          vk::InstanceCreateFlags(),
-          &ApplicationInfo().get(),
-          Layers(context).get(),
-          InstanceExtensions(context).get()
-      )
+  return context.createInstance(vk::InstanceCreateInfo(
+                                    vk::InstanceCreateFlags(),
+                                    &ApplicationInfo().get(),
+                                    Layers(context).get(),
+                                    InstanceExtensions(context).get()
+  )
 #ifdef VALIDATION
-          .setPNext(&DebugMessengerInfo().get().setPNext(&ValidationFeatures().get()))
+                                    .setPNext(&DebugMessengerInfo().get().setPNext(&ValidationFeatures().get()))
 #endif // VALIDATION
   );
 }
@@ -53,7 +52,7 @@ vk::raii::DebugUtilsMessengerEXT tge::Core::create_debugger() {
 #endif // VALIDATION
 }
 
-static int64_t get_physical_device_score(const vk::raii::PhysicalDevice &device) {
+static int64_t get_physical_device_score(const vk::raii::PhysicalDevice& device) {
   int64_t score = 0;
 
   vk::PhysicalDeviceProperties props = device.getProperties();
@@ -71,19 +70,17 @@ vk::raii::PhysicalDevice tge::Core::create_physical_device() {
   return std::ranges::max(instance.enumeratePhysicalDevices(), std::less(), get_physical_device_score);
 }
 
-vk::raii::Device tge::Core::create_device(SDL_Window *window) {
+vk::raii::Device tge::Core::create_device(SDL_Window* window) {
   vk::PhysicalDeviceDynamicRenderingFeatures render_features(true);
   vk::PhysicalDeviceSynchronization2Features sync_features(true, &render_features);
 
-  return physical_device.createDevice(
-      vk::DeviceCreateInfo(
-          vk::DeviceCreateFlags(),
-          QueueInfo(physical_device, surface).get(),
-          {},
-          DeviceExtensions(physical_device).get()
-      )
-          .setPNext(&sync_features)
-  );
+  return physical_device.createDevice(vk::DeviceCreateInfo(
+                                          vk::DeviceCreateFlags(),
+                                          QueueInfo(physical_device, surface).get(),
+                                          {},
+                                          DeviceExtensions(physical_device).get()
+  )
+                                          .setPNext(&sync_features));
 }
 
 uint32_t tge::Core::get_queue_family_index() {
@@ -144,7 +141,7 @@ std::vector<tge::Image> tge::Core::create_swapchain_images() {
   std::vector<tge::Image> res;
   res.reserve(frames_in_fligt_num);
 
-  for (const vk::Image &img : imgs) {
+  for (const vk::Image& img : imgs) {
     res.emplace_back(allocator, device, img, vk::Format::eB8G8R8A8Unorm);
   }
 
@@ -169,12 +166,10 @@ vk::raii::CommandPool tge::Core::create_command_pool() {
 }
 
 vk::raii::DescriptorPool tge::Core::create_descriptor_pool() {
-  return device.createDescriptorPool(
-      vk::DescriptorPoolCreateInfo(
-          vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
-          1024
-      )
-  );
+  return device.createDescriptorPool(vk::DescriptorPoolCreateInfo(
+      vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
+      1024
+  ));
 }
 
 std::vector<vk::raii::Fence> tge::Core::create_fences() {
@@ -211,15 +206,13 @@ void tge::Core::frame_start() {
   }
   device.resetFences(*fences[frame_index]);
 
-  auto [res, new_image_index] = device.acquireNextImage2KHR(
-      vk::AcquireNextImageInfoKHR(
-          swapchain,
-          UINT64_MAX,
-          image_available_semaphores[frame_index],
-          VK_NULL_HANDLE,
-          device_present_mask
-      )
-  );
+  auto [res, new_image_index] = device.acquireNextImage2KHR(vk::AcquireNextImageInfoKHR(
+      swapchain,
+      UINT64_MAX,
+      image_available_semaphores[frame_index],
+      VK_NULL_HANDLE,
+      device_present_mask
+  ));
 
   image_index = new_image_index;
   if (res != vk::Result::eSuccess) {

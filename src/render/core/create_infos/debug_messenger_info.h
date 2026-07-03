@@ -25,8 +25,8 @@ namespace tge {
     static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-        void *pUserData
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* pUserData
     );
   };
 } // namespace tge

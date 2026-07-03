@@ -15,13 +15,13 @@ namespace tge {
     MemoryAllocator(
         const vk::Instance instance,
         const vk::PhysicalDevice physical_device,
-        const vk::raii::Device &device
+        const vk::raii::Device& device
     );
 
-    MemoryAllocator(const MemoryAllocator &) = delete;
-    MemoryAllocator &operator=(const MemoryAllocator &) = delete;
+    MemoryAllocator(const MemoryAllocator&) = delete;
+    MemoryAllocator& operator=(const MemoryAllocator&) = delete;
 
-    MemoryAllocator(MemoryAllocator &&other) noexcept;
+    MemoryAllocator(MemoryAllocator&& other) noexcept;
 
     ~MemoryAllocator();
 
@@ -30,7 +30,7 @@ namespace tge {
     Image create_image(const vk::Image img, const vk::Format fmt);
 
   private:
-    const vk::raii::Device &device;
+    const vk::raii::Device& device;
     VmaAllocator allocator;
   };
 } // namespace tge

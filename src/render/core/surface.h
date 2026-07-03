@@ -11,12 +11,12 @@
 namespace tge {
   class RaiiSurface {
   public:
-    RaiiSurface(vk::Instance instance, SDL_Window *Window);
+    RaiiSurface(vk::Instance instance, SDL_Window* Window);
 
-    RaiiSurface(const RaiiSurface &) = delete;
-    RaiiSurface &operator=(const RaiiSurface &) = delete;
+    RaiiSurface(const RaiiSurface&) = delete;
+    RaiiSurface& operator=(const RaiiSurface&) = delete;
 
-    RaiiSurface(RaiiSurface &&other) noexcept;
+    RaiiSurface(RaiiSurface&& other) noexcept;
 
     ~RaiiSurface();
 

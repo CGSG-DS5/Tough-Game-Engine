@@ -5,12 +5,12 @@
 
 #include "tge.h"
 
-tge::RaiiSurface::RaiiSurface(vk::Instance instance, SDL_Window *window)
+tge::RaiiSurface::RaiiSurface(vk::Instance instance, SDL_Window* window)
     : instance(instance) {
   SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface);
 }
 
-tge::RaiiSurface::RaiiSurface(RaiiSurface &&other) noexcept
+tge::RaiiSurface::RaiiSurface(RaiiSurface&& other) noexcept
     : instance(other.instance)
     , surface(other.surface) {
   other.surface = VK_NULL_HANDLE;

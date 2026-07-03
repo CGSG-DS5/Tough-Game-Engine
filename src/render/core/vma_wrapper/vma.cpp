@@ -11,7 +11,7 @@
 tge::MemoryAllocator::MemoryAllocator(
     const vk::Instance instance,
     const vk::PhysicalDevice physical_device,
-    const vk::raii::Device &device
+    const vk::raii::Device& device
 )
     : device(device) {
   const VmaAllocatorCreateInfo create_info = {
@@ -32,7 +32,7 @@ tge::MemoryAllocator::~MemoryAllocator() {
   }
 }
 
-tge::MemoryAllocator::MemoryAllocator(MemoryAllocator &&other) noexcept
+tge::MemoryAllocator::MemoryAllocator(MemoryAllocator&& other) noexcept
     : allocator(other.allocator)
     , device(other.device) {
   other.allocator = VK_NULL_HANDLE;

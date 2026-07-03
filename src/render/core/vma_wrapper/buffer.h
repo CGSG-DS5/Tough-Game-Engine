@@ -15,21 +15,21 @@ namespace tge {
   class Buffer {
   public:
     Buffer(
-        MemoryAllocator &alloc,
+        MemoryAllocator& alloc,
         const uint32_t size,
         const VmaMemoryUsage memory_usage,
         const VkBufferUsageFlags buffer_usage
     );
 
-    Buffer(const Buffer &) = delete;
-    Buffer &operator=(const Buffer &) = delete;
+    Buffer(const Buffer&) = delete;
+    Buffer& operator=(const Buffer&) = delete;
 
-    Buffer(Buffer &&other) noexcept;
+    Buffer(Buffer&& other) noexcept;
 
     ~Buffer();
 
   private:
-    MemoryAllocator &allocator;
+    MemoryAllocator& allocator;
     VkBuffer buf;
     VmaAllocation buf_mem;
   };

@@ -9,15 +9,15 @@
 #include "def.h"
 
 namespace tge {
-  class InstanceExtensions : public InfoTemplate<std::vector<const char *>> {
+  class InstanceExtensions : public InfoTemplate<std::vector<const char*>> {
   public:
-    InstanceExtensions(const vk::raii::Context &ctx)
+    InstanceExtensions(const vk::raii::Context& ctx)
         : InfoTemplate(get_exts(ctx)) {}
 
   private:
-    static const std::vector<const char *> additional_exts;
+    static const std::vector<const char*> additional_exts;
 
-    static std::vector<const char *> get_exts(const vk::raii::Context &ctx);
+    static std::vector<const char*> get_exts(const vk::raii::Context& ctx);
   };
 } // namespace tge
 

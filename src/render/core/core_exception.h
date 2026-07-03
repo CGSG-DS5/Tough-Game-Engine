@@ -11,11 +11,11 @@
 namespace tge {
   class CoreException : public std::exception {
   public:
-    CoreException(const std::string &msg, const int32_t code) noexcept
+    CoreException(const std::string& msg, const int32_t code) noexcept
         : message(msg)
         , error_code(code) {}
 
-    const char *what() const noexcept override {
+    const char* what() const noexcept override {
       return message.c_str();
     }
 

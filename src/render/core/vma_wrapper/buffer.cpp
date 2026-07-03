@@ -6,7 +6,7 @@
 #include "tge.h"
 
 tge::Buffer::Buffer(
-    MemoryAllocator &alloc,
+    MemoryAllocator& alloc,
     const uint32_t size,
     const VmaMemoryUsage memory_usage,
     const VkBufferUsageFlags buffer_usage
@@ -28,7 +28,7 @@ tge::Buffer::Buffer(
   }
 }
 
-tge::Buffer::Buffer(Buffer &&other) noexcept
+tge::Buffer::Buffer(Buffer&& other) noexcept
     : allocator(other.allocator)
     , buf(other.buf)
     , buf_mem(other.buf_mem) {

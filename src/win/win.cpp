@@ -5,7 +5,7 @@
 
 #include "tge.h"
 
-tge::WindowHandler::WindowHandler(const std::string &title, int32_t width, int32_t height) {
+tge::WindowHandler::WindowHandler(const std::string& title, int32_t width, int32_t height) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     error = 1;
     return;
@@ -21,7 +21,7 @@ tge::WindowHandler::WindowHandler(const std::string &title, int32_t width, int32
   }
 }
 
-SDL_Window *tge::WindowHandler::get_window_handle() {
+SDL_Window* tge::WindowHandler::get_window_handle() {
   return window;
 }
 

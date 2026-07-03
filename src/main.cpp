@@ -8,11 +8,11 @@
 int main() {
   try {
     tge::Render Rnd(true, true);
-  } catch (const tge::CoreException &err) {
+  } catch (const tge::CoreException& err) {
     std::cerr << "Error occured while core initialization \"" << err.what() << "\"\n";
 
     return err.code();
-  } catch (const vk::SystemError &err) {
+  } catch (const vk::SystemError& err) {
     std::cerr << "Vulkan error occured while core initialization \"" << err.what() << "\"\n";
 
     return err.code().value();
