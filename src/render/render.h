@@ -10,13 +10,13 @@
 #include "win/win.h"
 
 namespace tge {
-  class Render
-      : WindowHandler
-      , Core {
+  class Render : public WindowHandler {
   public:
     Render(bool vsync, bool triple_buffer);
 
   private:
+    Core core;
+
     void on_resize(int32_t wigth, int32_t height) override;
     void on_mouse_motion(int32_t x, int32_t y) override;
     void on_mouse_up(int32_t button, int32_t x, int32_t y) override;
