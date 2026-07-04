@@ -241,6 +241,10 @@ void tge::Core::frame_start() {
   vk::RenderingInfo render_info(vk::RenderingFlags(), VkRect2D{{0, 0}, screen_size}, 1, 0, color_attachment);
 
   render_command_buffers[frame_index].beginRendering(render_info);
+
+  ////////// NEW CODE
+
+  render_command_buffers[frame_index].drawIndexed(4, 1, 0, 0, 0);
 }
 
 void tge::Core::frame_end() {
