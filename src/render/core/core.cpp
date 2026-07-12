@@ -25,19 +25,34 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     , fences(create_fences())
     , image_available_semaphores(create_semaphores())
     , render_finished_semaphores(create_semaphores())
-    , render_command_buffers(create_command_buffers()) {}
+    , render_command_buffers(create_command_buffers())
+    , /// :TODO: Delete
+    graphics_layout(device, {.setLayoutCount = 0, .pushConstantRangeCount = 1, .pPushConstantRanges = &tmp_range})
+    , tmp_pipeline(GraphicsPipeline(
+          graphics_layout,
+          device,
+          topology::NoVertices{},
+          "tmp",
+          vk::PrimitiveTopology::ePointList,
+          attachments_info,
+          vk::CullModeFlagBits::eNone
+      ))
+    , tmp_buffer(allocator, 1, 1, vk::BufferUsageFlagBits::eVertexBuffer)
+    , render_pass_factory(allocator, device)
+    , tmp_render_pass(render_pass_factory.create_gbuffer_pass(screen_size, 2, frames_in_fligt_num)) {}
 
 tge::Core::~Core() {
   queue.waitIdle();
 }
 
 vk::raii::Instance tge::Core::create_instance() {
-  return context.createInstance(vk::InstanceCreateInfo(
-                                    vk::InstanceCreateFlags(),
-                                    &ApplicationInfo().get(),
-                                    Layers(context).get(),
-                                    InstanceExtensions(context).get()
-  )
+  return context.createInstance(vk::InstanceCreateInfo{
+      .pApplicationInfo = &ApplicationInfo().get(),
+      .enabledLayerCount = static_cast<uint32_t>(Layers(context).get().size()),
+      .ppEnabledLayerNames = Layers(context).get().data(),
+      .enabledExtensionCount = static_cast<uint32_t>(InstanceExtensions(context).get().size()),
+      .ppEnabledExtensionNames = InstanceExtensions(context).get().data(),
+  }
 #ifdef VALIDATION
                                     .setPNext(&DebugMessengerInfo().get().setPNext(&ValidationFeatures().get()))
 #endif // VALIDATION
@@ -71,16 +86,18 @@ vk::raii::PhysicalDevice tge::Core::create_physical_device() {
 }
 
 vk::raii::Device tge::Core::create_device(SDL_Window* window) {
-  vk::PhysicalDeviceDynamicRenderingFeatures render_features(true);
-  vk::PhysicalDeviceSynchronization2Features sync_features(true, &render_features);
+  vk::PhysicalDeviceDynamicRenderingFeatures render_features{.dynamicRendering = true};
+  vk::PhysicalDeviceSynchronization2Features sync_features{.pNext = &render_features, .synchronization2 = true};
+  vk::PhysicalDeviceFeatures device_features{.fullDrawIndexUint32 = true, .geometryShader = true};
 
-  return physical_device.createDevice(vk::DeviceCreateInfo(
-                                          vk::DeviceCreateFlags(),
-                                          QueueInfo(physical_device, surface).get(),
-                                          {},
-                                          DeviceExtensions(physical_device).get()
-  )
-                                          .setPNext(&sync_features));
+  return physical_device.createDevice({
+      .pNext = &sync_features,
+      .queueCreateInfoCount = 1,
+      .pQueueCreateInfos = &QueueInfo(physical_device, surface).get(),
+      .enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions(physical_device).get().size()),
+      .ppEnabledExtensionNames = DeviceExtensions(physical_device).get().data(),
+      .pEnabledFeatures = &device_features,
+  });
 }
 
 uint32_t tge::Core::get_queue_family_index() {
@@ -157,19 +174,23 @@ void tge::Core::resize() {
   );
 
   swapchain_images = create_swapchain_images();
+
+  /// NEW_CODE
+  tmp_render_pass.resize(screen_size);
 }
 
 vk::raii::CommandPool tge::Core::create_command_pool() {
   return device.createCommandPool(
-      vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, queue_family_index)
+      {.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer, .queueFamilyIndex = queue_family_index}
   );
 }
 
 vk::raii::DescriptorPool tge::Core::create_descriptor_pool() {
-  return device.createDescriptorPool(vk::DescriptorPoolCreateInfo(
-      vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
-      1024
-  ));
+  return device.createDescriptorPool(
+      {.flags =
+           vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
+       .maxSets = 1024}
+  );
 }
 
 std::vector<vk::raii::Fence> tge::Core::create_fences() {
@@ -177,7 +198,7 @@ std::vector<vk::raii::Fence> tge::Core::create_fences() {
   result.reserve(frames_in_fligt_num);
 
   for (int32_t i = 0; i < frames_in_fligt_num; i++) {
-    result.emplace_back(device.createFence(vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled)));
+    result.emplace_back(device.createFence({.flags = vk::FenceCreateFlagBits::eSignaled}));
   }
 
   return result;
@@ -195,10 +216,14 @@ std::vector<vk::raii::Semaphore> tge::Core::create_semaphores() {
 }
 
 std::vector<vk::raii::CommandBuffer> tge::Core::create_command_buffers() {
-  return device.allocateCommandBuffers(
-      vk::CommandBufferAllocateInfo(command_pool, vk::CommandBufferLevel::ePrimary, frames_in_fligt_num)
-  );
+  return device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{
+      .commandPool = command_pool,
+      .level = vk::CommandBufferLevel::ePrimary,
+      .commandBufferCount = frames_in_fligt_num
+  });
 }
+
+#include <ctime>
 
 void tge::Core::frame_start() {
   if (vk::Result res = device.waitForFences(*fences[frame_index], 1, UINT64_MAX); res != vk::Result::eSuccess) {
@@ -206,76 +231,106 @@ void tge::Core::frame_start() {
   }
   device.resetFences(*fences[frame_index]);
 
-  auto [res, new_image_index] = device.acquireNextImage2KHR(vk::AcquireNextImageInfoKHR(
-      swapchain,
-      UINT64_MAX,
-      image_available_semaphores[frame_index],
-      VK_NULL_HANDLE,
-      device_present_mask
-  ));
+  auto [res, new_image_index] = device.acquireNextImage2KHR(
+      {.swapchain = swapchain,
+       .timeout = UINT64_MAX,
+       .semaphore = image_available_semaphores[frame_index],
+       .deviceMask = device_present_mask}
+  );
 
   image_index = new_image_index;
   if (res != vk::Result::eSuccess) {
     throw CoreException("Acquire next image error", static_cast<int32_t>(res));
   }
 
-  render_command_buffers[frame_index].reset();
-  render_command_buffers[frame_index].begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+  get_render_cmd_buf().reset();
+  get_render_cmd_buf().begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 
-  swapchain_images[image_index].switch_layout(
-      render_command_buffers[frame_index],
-      vk::ImageLayout::eColorAttachmentOptimal
+  tmp_render_pass.begin(get_render_cmd_buf(), frame_index);
+  tmp_render_pass.end(get_render_cmd_buf(), frame_index);
+
+  swapchain_images[image_index].switch_layout(get_render_cmd_buf(), vk::ImageLayout::eColorAttachmentOptimal);
+
+  vk::RenderingAttachmentInfo color_attachment{
+      .imageView = swapchain_images[image_index].get_image_view(),
+      .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+      .resolveMode = vk::ResolveModeFlagBits::eNone,
+      .resolveImageLayout = vk::ImageLayout::eUndefined,
+      .loadOp = vk::AttachmentLoadOp::eClear,
+      .storeOp = vk::AttachmentStoreOp::eStore,
+      .clearValue = {{0.30f, 0.47f, 0.8f, 1.f}}
+  };
+
+  vk::RenderingInfo render_info{
+      .renderArea = {.offset = {0, 0}, .extent = screen_size},
+      .layerCount = 1,
+      .colorAttachmentCount = 1,
+      .pColorAttachments = &color_attachment
+  };
+
+  get_render_cmd_buf().beginRendering(render_info);
+
+  get_render_cmd_buf().setViewport(
+      0,
+      vk::Viewport(0.f, 0.f, static_cast<float>(screen_size.width), static_cast<float>(screen_size.height), 0.f, 1.f)
   );
+  get_render_cmd_buf().setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), screen_size));
 
-  vk::RenderingAttachmentInfo color_attachment(
-      swapchain_images[image_index].get_image_view(),
-      vk::ImageLayout::eColorAttachmentOptimal,
-      vk::ResolveModeFlagBits::eNone,
-      VK_NULL_HANDLE,
-      vk::ImageLayout::eUndefined,
-      vk::AttachmentLoadOp::eClear,
-      vk::AttachmentStoreOp::eStore,
-      vk::ClearColorValue(0.30f, 0.47f, 0.8f, 1.f)
+  get_render_cmd_buf().bindPipeline(vk::PipelineBindPoint::eGraphics, tmp_pipeline);
+  std::vector<float> s{clock() / 1000.f};
+  get_render_cmd_buf().pushConstants(
+      graphics_layout,
+      vk::ShaderStageFlagBits::eAllGraphics,
+      0,
+      static_cast<const vk::ArrayProxy<const float>&>(s)
   );
-
-  vk::RenderingInfo render_info(vk::RenderingFlags(), VkRect2D{{0, 0}, screen_size}, 1, 0, color_attachment);
-
-  render_command_buffers[frame_index].beginRendering(render_info);
-
-  ////////// NEW CODE
-
-  render_command_buffers[frame_index].drawIndexed(4, 1, 0, 0, 0);
+  get_render_cmd_buf().draw(1, 1, 0, 0);
 }
 
 void tge::Core::frame_end() {
-  render_command_buffers[frame_index].endRendering();
+  get_render_cmd_buf().endRendering();
 
-  swapchain_images[image_index].switch_layout(render_command_buffers[frame_index], vk::ImageLayout::ePresentSrcKHR);
+  swapchain_images[image_index].switch_layout(get_render_cmd_buf(), vk::ImageLayout::ePresentSrcKHR);
 
-  render_command_buffers[frame_index].end();
+  get_render_cmd_buf().end();
 
-  vk::SemaphoreSubmitInfo wait_semaphore_info(
-      image_available_semaphores[frame_index],
-      0,
-      vk::PipelineStageFlagBits2::eAllCommands
-  );
+  vk::SemaphoreSubmitInfo wait_semaphore_info{
+      .semaphore = image_available_semaphores[frame_index],
+      .stageMask = vk::PipelineStageFlagBits2::eAllCommands
+  };
 
-  vk::CommandBufferSubmitInfo cmd_buf_submit_info(render_command_buffers[frame_index]);
+  vk::CommandBufferSubmitInfo cmd_buf_submit_info{.commandBuffer = get_render_cmd_buf()};
 
-  vk::SemaphoreSubmitInfo signal_semaphore_info(
-      render_finished_semaphores[frame_index],
-      0,
-      vk::PipelineStageFlagBits2::eAllCommands
-  );
+  vk::SemaphoreSubmitInfo signal_semaphore_info{
+      .semaphore = render_finished_semaphores[image_index],
+      .stageMask = vk::PipelineStageFlagBits2::eAllCommands
+  };
 
-  vk::SubmitInfo2 submit_info(vk::SubmitFlags(), wait_semaphore_info, cmd_buf_submit_info, signal_semaphore_info);
+  vk::SubmitInfo2 submit_info{
+      .waitSemaphoreInfoCount = 1,
+      .pWaitSemaphoreInfos = &wait_semaphore_info,
+      .commandBufferInfoCount = 1,
+      .pCommandBufferInfos = &cmd_buf_submit_info,
+      .signalSemaphoreInfoCount = 1,
+      .pSignalSemaphoreInfos = &signal_semaphore_info
+  };
   queue.submit2(submit_info, fences[frame_index]);
 
-  vk::PresentInfoKHR present_info(*render_finished_semaphores[frame_index], *swapchain, image_index);
+  vk::PresentInfoKHR present_info{
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &*render_finished_semaphores[image_index],
+      .swapchainCount = 1,
+      .pSwapchains = &*swapchain,
+      .pImageIndices = &image_index
+  };
 
   if (vk::Result res = queue.presentKHR(present_info); res != vk::Result::eSuccess) {
     throw CoreException("Error in present", static_cast<int32_t>(res));
   }
 
   frame_index = (frame_index + 1) % render_finished_semaphores.size();
+}
+
+const vk::raii::CommandBuffer& tge::Core::get_render_cmd_buf() const {
+  return render_command_buffers[frame_index];
 }

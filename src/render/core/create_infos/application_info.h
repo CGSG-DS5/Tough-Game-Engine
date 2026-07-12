@@ -19,11 +19,11 @@ namespace tge {
   public:
     ApplicationInfo()
         : InfoTemplate(
-              "Tough Game Engine Application",
-              vk::makeApiVersion(0, 0, 1, 0),
-              "Tough Game Engine",
-              vk::makeApiVersion(0, 0, 1, 0),
-              CURRENT_VULKAN_VERSION
+              {.pApplicationName = "Tough Game Engine Application",
+               .applicationVersion = vk::makeApiVersion(0, 0, 1, 0),
+               .pEngineName = "Tough Game Engine",
+               .engineVersion = vk::makeApiVersion(0, 0, 1, 0),
+               .apiVersion = CURRENT_VULKAN_VERSION}
           ) {}
   };
 } // namespace tge

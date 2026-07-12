@@ -7,6 +7,8 @@
 #define __tge_core_h_
 
 #include "create_infos/infos.h"
+#include "pipelines/graphics_pipeline.h"
+#include "render_pass.h"
 #include "surface.h"
 #include "vma_wrapper/vma_allocator.h"
 
@@ -20,6 +22,8 @@ namespace tge {
 
     void frame_start();
     void frame_end();
+
+    const vk::raii::CommandBuffer& get_render_cmd_buf() const;
 
   private:
     const vk::raii::Context context{};
@@ -50,6 +54,19 @@ namespace tge {
 
     uint32_t frame_index{};
     uint32_t image_index{};
+
+    //////// NEW CODE
+
+    vk::PushConstantRange tmp_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
+    vk::raii::PipelineLayout graphics_layout;
+    AttachmentsInfo attachments_info{.color_attachments_formats = {vk::Format::eB8G8R8A8Unorm}};
+    Buffer tmp_buffer;
+    GraphicsPipeline tmp_pipeline;
+
+    RenderPassFactory render_pass_factory;
+    RenderPass tmp_render_pass;
+
+    //////// NEW CODE
 
     vk::raii::Instance create_instance();
     vk::raii::DebugUtilsMessengerEXT create_debugger();

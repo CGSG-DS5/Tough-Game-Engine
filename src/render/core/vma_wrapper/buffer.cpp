@@ -5,7 +5,7 @@
 
 #include "tge.h"
 
-tge::Buffer::Buffer(MemoryAllocator& alloc, uint32_t size, bool is_local, VkBufferUsageFlags buffer_usage)
+tge::Buffer::Buffer(const MemoryAllocator& alloc, uint32_t size, bool is_local, vk::BufferUsageFlagBits buffer_usage)
     : allocator(alloc)
     , is_local(is_local) {
   VmaAllocationCreateInfo vma_create_info{
@@ -17,7 +17,7 @@ tge::Buffer::Buffer(MemoryAllocator& alloc, uint32_t size, bool is_local, VkBuff
   if (is_local) {
     vma_create_info.requiredFlags = static_cast<uint32_t>(local_flags);
   } else {
-    vma_create_info.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    vma_create_info.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     vma_create_info.requiredFlags = static_cast<uint32_t>(host_flags);
     vma_create_info.preferredFlags = static_cast<uint32_t>(local_flags);
   }
@@ -25,7 +25,7 @@ tge::Buffer::Buffer(MemoryAllocator& alloc, uint32_t size, bool is_local, VkBuff
   VkBufferCreateInfo buffer_create_info{
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
       .size = size,
-      .usage = buffer_usage,
+      .usage = static_cast<uint32_t>(buffer_usage),
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE
   };
 
@@ -40,19 +40,14 @@ tge::Buffer::Buffer(MemoryAllocator& alloc, uint32_t size, bool is_local, VkBuff
   mapped_data = vma_allocation_info.pMappedData;
 }
 
-tge::Buffer::Buffer(Buffer&& other) noexcept
-    : allocator(other.allocator)
-    , buf(other.buf)
-    , buf_mem(other.buf_mem)
-    , mapped_data(other.mapped_data)
-    , is_local(other.is_local) {
-  other.buf = VK_NULL_HANDLE;
-}
-
 tge::Buffer::~Buffer() {
   if (buf) {
     vmaDestroyBuffer(allocator, buf, buf_mem);
   }
+}
+
+VkBuffer tge::Buffer::get_buffer() const {
+  return buf;
 }
 
 void* tge::Buffer::get_mapped_data() const {

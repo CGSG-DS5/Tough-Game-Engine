@@ -92,7 +92,7 @@ std::vector<const char*> tge::InstanceExtensions::get_exts(const vk::raii::Conte
  * Debug messenger
  ***/
 
-enum class console_rgb {
+enum class ConsoleRGB {
   red,
   green,
   yellow,
@@ -100,68 +100,66 @@ enum class console_rgb {
   white
 };
 
-static void set_console_color(const console_rgb rgb) {
+static void set_console_color(const ConsoleRGB rgb) {
   switch (rgb) {
-  case console_rgb::red:
+  case ConsoleRGB::red:
     std::cout << "\x1b[31m";
     break;
-  case console_rgb::green:
+  case ConsoleRGB::green:
     std::cout << "\x1b[32m";
     break;
-  case console_rgb::yellow:
+  case ConsoleRGB::yellow:
     std::cout << "\x1b[33m";
     break;
-  case console_rgb::blue:
+  case ConsoleRGB::blue:
     std::cout << "\x1b[34m";
     break;
-  case console_rgb::white:
+  case ConsoleRGB::white:
     std::cout << "\x1b[0m";
     break;
   }
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL tge::DebugMessengerInfo::debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+VKAPI_ATTR vk::Bool32 VKAPI_CALL tge::DebugMessengerInfo::debug_callback(
+    vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    vk::DebugUtilsMessageTypeFlagsEXT messageTypes,
+    const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData
 ) {
   std::string msg;
 
-  switch (messageTypes) {
-  case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
+  if (messageTypes & vk::DebugUtilsMessageTypeFlagsEXT::BitsType::eGeneral) {
     msg += "[GENERAL";
-    break;
-  case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
+  }
+  if (messageTypes & vk::DebugUtilsMessageTypeFlagsEXT::BitsType::ePerformance) {
     msg += "[PERFORMANCE";
-    break;
-  case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
+  }
+  if (messageTypes & vk::DebugUtilsMessageTypeFlagsEXT::BitsType::eValidation) {
     msg += "[VALIDATION";
-    break;
   }
 
   switch (messageSeverity) {
-  case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-    set_console_color(console_rgb::blue);
+  case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
+    set_console_color(ConsoleRGB::blue);
     msg += " | VERBOSE] ";
     break;
-  case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-    set_console_color(console_rgb::blue);
+  case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
+    set_console_color(ConsoleRGB::blue);
     msg += " | INFO] ";
     break;
-  case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-    set_console_color(console_rgb::yellow);
+  case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
+    set_console_color(ConsoleRGB::yellow);
     msg += " | WARNING] ";
     break;
-  case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-    set_console_color(console_rgb::red);
+  case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
+    set_console_color(ConsoleRGB::red);
     msg += " | ERROR] ";
     break;
   }
 
   std::cerr << msg << pCallbackData->pMessage << "\n";
 
-  set_console_color(console_rgb::white);
+  set_console_color(ConsoleRGB::white);
 
   return VK_FALSE;
 }
@@ -212,7 +210,7 @@ std::vector<const char*> tge::DeviceExtensions::get_exts(vk::PhysicalDevice phys
   }
 
   std::vector<const char*> required_extensions{
-      VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+      vk::KHRSwapchainExtensionName,
       // VK_EXT_NESTED_COMMAND_BUFFER_EXTENSION_NAME
   };
 

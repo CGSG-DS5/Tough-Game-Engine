@@ -19,21 +19,19 @@ namespace tge {
         vk::SwapchainKHR old_swapchain = {}
     )
         : InfoTemplate(
-              vk::SwapchainCreateFlagsKHR(),
-              surface,
-              present_mode == vk::PresentModeKHR::eMailbox ? 3 : 2,
-              vk::Format::eB8G8R8A8Unorm,
-              vk::ColorSpaceKHR::eSrgbNonlinear,
-              extent,
-              1,
-              vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
-              vk::SharingMode::eExclusive,
-              nullptr,
-              vk::SurfaceTransformFlagBitsKHR::eIdentity,
-              vk::CompositeAlphaFlagBitsKHR::eOpaque,
-              present_mode,
-              true,
-              old_swapchain
+              {.surface = surface,
+               .minImageCount = present_mode == vk::PresentModeKHR::eMailbox ? 3u : 2u,
+               .imageFormat = vk::Format::eB8G8R8A8Unorm,
+               .imageColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear,
+               .imageExtent = extent,
+               .imageArrayLayers = 1,
+               .imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
+               .imageSharingMode = vk::SharingMode::eExclusive,
+               .preTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity,
+               .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+               .presentMode = present_mode,
+               .clipped = true,
+               .oldSwapchain = old_swapchain}
           ) {}
   };
 } // namespace tge
