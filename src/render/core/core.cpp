@@ -32,7 +32,7 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
           graphics_layout,
           device,
           topology::NoVertices{},
-          "tmp",
+          "test_shader",
           vk::PrimitiveTopology::ePointList,
           attachments_info,
           vk::CullModeFlagBits::eNone

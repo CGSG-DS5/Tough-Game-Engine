@@ -13,13 +13,12 @@ tge::GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&& other) noexcept
 
 tge::GraphicsPipeline::~GraphicsPipeline() {}
 
-
 tge::GraphicsPipeline::operator vk::Pipeline() const {
   return pipeline;
 }
 
 std::vector<vk::PipelineShaderStageCreateInfo> tge::GraphicsPipeline::create_shader_stages() const {
-  static std::map<std::string, vk::ShaderStageFlagBits> stages{
+  static std::vector<std::tuple<std::string, vk::ShaderStageFlagBits>> stages{
       {"vert", vk::ShaderStageFlagBits::eVertex},
       {"frag", vk::ShaderStageFlagBits::eFragment},
       {"geom", vk::ShaderStageFlagBits::eGeometry},
@@ -38,7 +37,6 @@ std::vector<vk::PipelineShaderStageCreateInfo> tge::GraphicsPipeline::create_sha
 
   return stage_create_infos;
 }
-
 
 std::optional<vk::raii::ShaderModule> tge::GraphicsPipeline::create_shader_module(const std::string& path) const {
   auto shader_code = file_system::read_resource(path);
