@@ -416,7 +416,7 @@ void tge::Core::frame_start() {
       nullptr
   );
 
-  std::vector<float> s{clock() / 1000.f};
+  std::vector<float> s{clock() / static_cast<float>(CLOCKS_PER_SEC)};
   get_render_cmd_buf().pushConstants(
       graphics_layout,
       vk::ShaderStageFlagBits::eAllGraphics,
