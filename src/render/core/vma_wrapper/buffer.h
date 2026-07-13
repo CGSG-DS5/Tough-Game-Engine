@@ -25,6 +25,7 @@ namespace tge {
     Buffer& operator=(const Buffer&) = delete;
 
     Buffer(Buffer&& other) noexcept;
+    Buffer& operator=(Buffer&& other) noexcept;
 
     ~Buffer();
 

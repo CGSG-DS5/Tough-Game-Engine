@@ -46,6 +46,26 @@ tge::Buffer::~Buffer() {
   }
 }
 
+tge::Buffer::Buffer(Buffer&& other) noexcept
+    : allocator(other.allocator)
+    , buf(other.buf)
+    , buf_mem(other.buf_mem)
+    , mapped_data(other.mapped_data)
+    , is_local(other.is_local) {
+  other.buf = nullptr;
+}
+
+tge::Buffer& tge::Buffer::operator=(Buffer&& other) noexcept {
+  buf = other.buf;
+  buf_mem = other.buf_mem;
+  mapped_data = other.mapped_data;
+  is_local = other.is_local;
+
+  other.buf = nullptr;
+
+  return *this;
+}
+
 VkBuffer tge::Buffer::get_buffer() const {
   return buf;
 }

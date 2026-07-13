@@ -3,6 +3,11 @@ struct PushConstants {
 }
 [[vk::push_constant]] ConstantBuffer<PushConstants> pc;
 
+struct UniformBuffer {
+    float color;
+};
+ConstantBuffer<UniformBuffer> ubo;
+
 float2 rotate(float2 v) {
     float c = cos(pc.time);
     float s = sin(pc.time);
@@ -38,17 +43,17 @@ void geomMain(
 ) {
     GSOutput v0;
     v0.position = float4(rotate(0, -0.5), 0, 1);
-    v0.color = float3(1, 0, 0);
+    v0.color = float3(1, 0, 0) * ubo.color;
     outputStream.Append(v0);
 
     GSOutput v1;
     v1.position = float4(rotate(-0.5, 0.5), 0, 1);
-    v1.color = float3(0, 1, 0);
+    v1.color = float3(0, 1, 0) * ubo.color;
     outputStream.Append(v1);
 
     GSOutput v2;
     v2.position = float4(rotate(0.5, 0.5), 0, 1);
-    v2.color = float3(0, 0, 1);
+    v2.color = float3(0, 0, 1) * ubo.color;
     outputStream.Append(v2);
 
     outputStream.RestartStrip();

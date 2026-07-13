@@ -5,6 +5,27 @@
 
 #include "tge.h"
 
+template<typename T>
+auto get_handle_from_raii(const std::vector<T>& data) {
+  using HandleType = typename T::CppType;
+  std::vector<HandleType> result;
+  result.reserve(data.size());
+  for (const auto& item : data) {
+    result.push_back(*item);
+  }
+  return result;
+}
+
+template<typename S, typename T>
+auto get_handle_from_raii(const std::map<S, std::vector<T>>& data) {
+  using HandleType = typename T::CppType;
+  std::map<S, std::vector<HandleType>> result;
+  for (const auto& [k, v] : data) {
+    result[k] = get_handle_from_raii(v);
+  }
+  return result;
+}
+
 tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     : instance(create_instance())
     , debug_messenger(create_debugger())
@@ -16,30 +37,58 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     , queue(create_queue())
     , allocator(create_allocator())
     , swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer))
-    , frames_in_fligt_num(swapchain_present_mode == vk::PresentModeKHR::eMailbox ? 3 : 2)
-    , /// :TODO: Check with 2 always
-    swapchain(create_swapchain())
+    , frames_in_flight(2)
+    , swapchain(create_swapchain())
     , swapchain_images(create_swapchain_images())
+    , descriptor_set_layouts_raii(create_descriptor_set_layout())
+    , descriptor_set_layouts(get_handle_from_raii(descriptor_set_layouts_raii))
+    , graphics_layout(
+          device,
+          {.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size()),
+           .pSetLayouts = descriptor_set_layouts.data(),
+           .pushConstantRangeCount = 1,
+           .pPushConstantRanges = &push_constant_range}
+      )
     , command_pool(create_command_pool())
     , descriptor_pool(create_descriptor_pool())
+    , descriptor_sets_raii(create_all_descriptor_sets())
+    , descriptor_sets(get_handle_from_raii(descriptor_sets_raii))
     , fences(create_fences())
-    , image_available_semaphores(create_semaphores())
-    , render_finished_semaphores(create_semaphores())
+    , image_available_semaphores(create_semaphores(frames_in_flight))
+    , render_finished_semaphores(create_semaphores(static_cast<uint32_t>(swapchain_images.size())))
     , render_command_buffers(create_command_buffers())
     , /// :TODO: Delete
-    graphics_layout(device, {.setLayoutCount = 0, .pushConstantRangeCount = 1, .pPushConstantRanges = &tmp_range})
-    , tmp_pipeline(GraphicsPipeline(
-          graphics_layout,
-          device,
-          topology::NoVertices{},
-          "test_shader",
-          vk::PrimitiveTopology::ePointList,
-          attachments_info,
-          vk::CullModeFlagBits::eNone
-      ))
-    , tmp_buffer(allocator, 1, 1, vk::BufferUsageFlagBits::eVertexBuffer)
+    tmp_pipeline(GraphicsPipeline(
+        graphics_layout,
+        device,
+        topology::NoVertices{},
+        "test_shader",
+        vk::PrimitiveTopology::ePointList,
+        attachments_info,
+        vk::CullModeFlagBits::eNone
+    ))
+    , tmp_buffers()
     , render_pass_factory(allocator, device)
-    , tmp_render_pass(render_pass_factory.create_gbuffer_pass(screen_size, 2, frames_in_fligt_num)) {}
+    , tmp_render_pass(render_pass_factory.create_gbuffer_pass(screen_size, 2, frames_in_flight)) {
+  tmp_buffers.reserve(frames_in_flight);
+  for (uint32_t i = 0; i < frames_in_flight; i++) {
+    tmp_buffers.emplace_back(allocator, 4, false, vk::BufferUsageFlagBits::eUniformBuffer);
+  }
+
+  for (size_t i = 0; i < frames_in_flight; i++) {
+    vk::DescriptorBufferInfo buffer_info{.buffer = tmp_buffers[i].get_buffer(), .offset = 0, .range = 4};
+    vk::WriteDescriptorSet descriptor_write{
+        .dstSet = descriptor_sets.at(DescriptorSetLayoutType::RENDER)[i],
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eUniformBuffer,
+        .pBufferInfo = &buffer_info
+    };
+
+    device.updateDescriptorSets(descriptor_write, {});
+  }
+}
 
 tge::Core::~Core() {
   queue.waitIdle();
@@ -86,18 +135,25 @@ vk::raii::PhysicalDevice tge::Core::create_physical_device() {
 }
 
 vk::raii::Device tge::Core::create_device(SDL_Window* window) {
-  vk::PhysicalDeviceDynamicRenderingFeatures render_features{.dynamicRendering = true};
-  vk::PhysicalDeviceSynchronization2Features sync_features{.pNext = &render_features, .synchronization2 = true};
+  auto device_exts = DeviceExtensions(physical_device).get();
   vk::PhysicalDeviceFeatures device_features{.fullDrawIndexUint32 = true, .geometryShader = true};
+  vk::StructureChain<
+      vk::DeviceCreateInfo,
+      vk::PhysicalDeviceSynchronization2Features,
+      vk::PhysicalDeviceDynamicRenderingFeatures>
+      device_create_info{
+          {
+              .queueCreateInfoCount = 1,
+              .pQueueCreateInfos = &QueueInfo(physical_device, surface).get(),
+              .enabledExtensionCount = static_cast<uint32_t>(device_exts.size()),
+              .ppEnabledExtensionNames = device_exts.data(),
+              .pEnabledFeatures = &device_features,
+          },
+          {.synchronization2 = true},
+          {.dynamicRendering = true}
+      };
 
-  return physical_device.createDevice({
-      .pNext = &sync_features,
-      .queueCreateInfoCount = 1,
-      .pQueueCreateInfos = &QueueInfo(physical_device, surface).get(),
-      .enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions(physical_device).get().size()),
-      .ppEnabledExtensionNames = DeviceExtensions(physical_device).get().data(),
-      .pEnabledFeatures = &device_features,
-  });
+  return physical_device.createDevice(device_create_info.get<vk::DeviceCreateInfo>());
 }
 
 uint32_t tge::Core::get_queue_family_index() {
@@ -156,7 +212,7 @@ vk::raii::SwapchainKHR tge::Core::create_swapchain() {
 std::vector<tge::Image> tge::Core::create_swapchain_images() {
   const std::vector<vk::Image> imgs = swapchain.getImages();
   std::vector<tge::Image> res;
-  res.reserve(frames_in_fligt_num);
+  res.reserve(imgs.size());
 
   for (const vk::Image& img : imgs) {
     res.emplace_back(allocator, device, img, vk::Format::eB8G8R8A8Unorm);
@@ -179,6 +235,44 @@ void tge::Core::resize() {
   tmp_render_pass.resize(screen_size);
 }
 
+const std::map<tge::Core::DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>>&
+tge::Core::get_layout_bindings() {
+  static const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>> bindings{
+      {DescriptorSetLayoutType::RENDER,
+       {{.binding = 0,
+         .descriptorType = vk::DescriptorType::eUniformBuffer,
+         .descriptorCount = 1,
+         .stageFlags = vk::ShaderStageFlagBits::eAll},
+        {.binding = 1,
+         .descriptorType = vk::DescriptorType::eStorageBuffer,
+         .descriptorCount = 3,
+         .stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex}}},
+      {DescriptorSetLayoutType::FINAL,
+       {{.binding = 0,
+         .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+         .descriptorCount = 1,
+         .stageFlags = vk::ShaderStageFlagBits::eFragment}}}
+  };
+
+  return bindings;
+}
+
+std::vector<vk::raii::DescriptorSetLayout> tge::Core::create_descriptor_set_layout() const {
+  const auto& layout_bindings = get_layout_bindings();
+
+  std::vector<vk::raii::DescriptorSetLayout> res;
+  for (const auto& [type, bindings] : layout_bindings) {
+    vk::DescriptorSetLayoutCreateInfo info{
+        .bindingCount = static_cast<uint32_t>(bindings.size()),
+        .pBindings = bindings.data()
+    };
+
+    res.emplace_back(device, info);
+  }
+
+  return res;
+}
+
 vk::raii::CommandPool tge::Core::create_command_pool() {
   return device.createCommandPool(
       {.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer, .queueFamilyIndex = queue_family_index}
@@ -186,29 +280,65 @@ vk::raii::CommandPool tge::Core::create_command_pool() {
 }
 
 vk::raii::DescriptorPool tge::Core::create_descriptor_pool() {
+  const auto& layout_bindings = get_layout_bindings();
+
+  uint32_t max_sets = 0;
+  std::vector<vk::DescriptorPoolSize> sizes;
+
+  for (const auto& [type, bindings] : layout_bindings) {
+    uint32_t num_sets = frames_in_flight;
+    max_sets += num_sets;
+    for (const auto& binding : bindings) {
+      sizes.push_back({.type = binding.descriptorType, .descriptorCount = binding.descriptorCount * num_sets});
+    }
+  }
+
   return device.createDescriptorPool(
       {.flags =
-           vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
-       .maxSets = 1024}
+           vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+       .maxSets = max_sets,
+       .poolSizeCount = static_cast<uint32_t>(sizes.size()),
+       .pPoolSizes = sizes.data()}
+  );
+}
+
+std::map<tge::Core::DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>>
+tge::Core::create_all_descriptor_sets() {
+  std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> res;
+  for (uint32_t i = 0; i < descriptor_set_layouts.size(); i++) {
+    auto type = static_cast<DescriptorSetLayoutType>(i);
+    res.insert({type, create_descriptor_sets(type)});
+  }
+
+  return res;
+}
+
+std::vector<vk::raii::DescriptorSet> tge::Core::create_descriptor_sets(DescriptorSetLayoutType type) {
+  std::vector<vk::DescriptorSetLayout> layouts(frames_in_flight, descriptor_set_layouts[static_cast<uint32_t>(type)]);
+
+  return device.allocateDescriptorSets(
+      {.descriptorPool = descriptor_pool,
+       .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
+       .pSetLayouts = layouts.data()}
   );
 }
 
 std::vector<vk::raii::Fence> tge::Core::create_fences() {
   std::vector<vk::raii::Fence> result;
-  result.reserve(frames_in_fligt_num);
+  result.reserve(frames_in_flight);
 
-  for (int32_t i = 0; i < frames_in_fligt_num; i++) {
+  for (int32_t i = 0; i < frames_in_flight; i++) {
     result.emplace_back(device.createFence({.flags = vk::FenceCreateFlagBits::eSignaled}));
   }
 
   return result;
 }
 
-std::vector<vk::raii::Semaphore> tge::Core::create_semaphores() {
+std::vector<vk::raii::Semaphore> tge::Core::create_semaphores(uint32_t num) {
   std::vector<vk::raii::Semaphore> result;
-  result.reserve(frames_in_fligt_num);
+  result.reserve(num);
 
-  for (int32_t i = 0; i < frames_in_fligt_num; i++) {
+  for (int32_t i = 0; i < num; i++) {
     result.emplace_back(device.createSemaphore(vk::SemaphoreCreateInfo()));
   }
 
@@ -219,7 +349,7 @@ std::vector<vk::raii::CommandBuffer> tge::Core::create_command_buffers() {
   return device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{
       .commandPool = command_pool,
       .level = vk::CommandBufferLevel::ePrimary,
-      .commandBufferCount = frames_in_fligt_num
+      .commandBufferCount = frames_in_flight
   });
 }
 
@@ -277,6 +407,15 @@ void tge::Core::frame_start() {
   get_render_cmd_buf().setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), screen_size));
 
   get_render_cmd_buf().bindPipeline(vk::PipelineBindPoint::eGraphics, tmp_pipeline);
+
+  get_render_cmd_buf().bindDescriptorSets(
+      vk::PipelineBindPoint::eGraphics,
+      graphics_layout,
+      0,
+      descriptor_sets.at(DescriptorSetLayoutType::RENDER)[frame_index],
+      nullptr
+  );
+
   std::vector<float> s{clock() / 1000.f};
   get_render_cmd_buf().pushConstants(
       graphics_layout,
@@ -284,6 +423,9 @@ void tge::Core::frame_start() {
       0,
       static_cast<const vk::ArrayProxy<const float>&>(s)
   );
+
+  *static_cast<float*>(tmp_buffers[frame_index].get_mapped_data()) = screen_size.width / 1920.f;
+
   get_render_cmd_buf().draw(1, 1, 0, 0);
 }
 
@@ -328,7 +470,7 @@ void tge::Core::frame_end() {
     throw CoreException("Error in present", static_cast<int32_t>(res));
   }
 
-  frame_index = (frame_index + 1) % render_finished_semaphores.size();
+  frame_index = (frame_index + 1) % frames_in_flight;
 }
 
 const vk::raii::CommandBuffer& tge::Core::get_render_cmd_buf() const {

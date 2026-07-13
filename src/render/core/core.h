@@ -15,6 +15,11 @@
 namespace tge {
   class Core {
   public:
+    enum struct DescriptorSetLayoutType : uint32_t {
+      RENDER = 0,
+      FINAL = 1,
+    };
+
     Core(SDL_Window* window, bool vsync, bool triple_buffer);
     ~Core();
 
@@ -40,12 +45,20 @@ namespace tge {
 
     vk::Extent2D screen_size;
     const vk::PresentModeKHR swapchain_present_mode;
-    const uint32_t frames_in_fligt_num;
+    const uint32_t frames_in_flight;
     vk::raii::SwapchainKHR swapchain;
     std::vector<Image> swapchain_images;
 
+    const std::vector<vk::raii::DescriptorSetLayout> descriptor_set_layouts_raii;
+    const std::vector<vk::DescriptorSetLayout> descriptor_set_layouts;
+    const vk::PushConstantRange push_constant_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
+    const vk::raii::PipelineLayout graphics_layout;
+
     const vk::raii::CommandPool command_pool;
     const vk::raii::DescriptorPool descriptor_pool;
+
+    const std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> descriptor_sets_raii;
+    const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSet>> descriptor_sets;
 
     const std::vector<vk::raii::Fence> fences;
     const std::vector<vk::raii::Semaphore> image_available_semaphores;
@@ -58,9 +71,8 @@ namespace tge {
     //////// NEW CODE
 
     vk::PushConstantRange tmp_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
-    vk::raii::PipelineLayout graphics_layout;
     AttachmentsInfo attachments_info{.color_attachments_formats = {vk::Format::eB8G8R8A8Unorm}};
-    Buffer tmp_buffer;
+    std::vector<Buffer> tmp_buffers;
     GraphicsPipeline tmp_pipeline;
 
     RenderPassFactory render_pass_factory;
@@ -76,15 +88,21 @@ namespace tge {
     vk::raii::Queue create_queue();
     MemoryAllocator create_allocator();
 
-    vk::PresentModeKHR get_swapchain_present_mode(const bool vsync, const bool triple_buffer);
+    vk::PresentModeKHR get_swapchain_present_mode(bool vsync, bool triple_buffer);
     vk::raii::SwapchainKHR create_swapchain();
     std::vector<Image> create_swapchain_images();
+
+    static const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>>& get_layout_bindings();
+    std::vector<vk::raii::DescriptorSetLayout> create_descriptor_set_layout() const;
 
     vk::raii::CommandPool create_command_pool();
     vk::raii::DescriptorPool create_descriptor_pool();
 
+    std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> create_all_descriptor_sets();
+    std::vector<vk::raii::DescriptorSet> create_descriptor_sets(DescriptorSetLayoutType type);
+
     std::vector<vk::raii::Fence> create_fences();
-    std::vector<vk::raii::Semaphore> create_semaphores();
+    std::vector<vk::raii::Semaphore> create_semaphores(uint32_t num);
     std::vector<vk::raii::CommandBuffer> create_command_buffers();
   };
 } // namespace tge
