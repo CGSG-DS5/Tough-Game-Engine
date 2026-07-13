@@ -140,12 +140,12 @@ namespace tge {
 
       return vertex_input;
     }
-
-    template<>
-    vk::PipelineVertexInputStateCreateInfo create_vertex_input<topology::NoVertices>() const {
-      return {};
-    }
   };
+
+  template<>
+  inline vk::PipelineVertexInputStateCreateInfo GraphicsPipeline::create_vertex_input<topology::NoVertices>() const {
+    return {};
+  }
 } // namespace tge
 
 #endif // __graphics_pipeline_h_
