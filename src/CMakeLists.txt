@@ -5,7 +5,9 @@ target_sources(${PROJECT_NAME}
     "main.cpp"
   PUBLIC FILE_SET HEADERS FILES
     "def.h"
-)
+    "include_thrid_party.cpp")
+
+add_subdirectory(third_party)
 
 add_subdirectory(win)
 add_subdirectory(render)

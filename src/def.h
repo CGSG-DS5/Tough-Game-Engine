@@ -24,6 +24,11 @@
 #include <vector>
 
 /***
+ * STB Image Support
+ ***/
+#include "third_party/stb/stb_image.h"
+
+/***
  * SDL Support
  ***/
 
