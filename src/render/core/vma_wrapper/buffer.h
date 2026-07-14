@@ -15,23 +15,29 @@ namespace tge {
   class Buffer {
   public:
     Buffer(
-        MemoryAllocator& alloc,
-        const uint32_t size,
-        const VmaMemoryUsage memory_usage,
-        const VkBufferUsageFlags buffer_usage
+        const MemoryAllocator& alloc,
+        uint32_t size,
+        bool is_local,
+        vk::BufferUsageFlagBits buffer_usage
     );
 
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
 
     Buffer(Buffer&& other) noexcept;
+    Buffer& operator=(Buffer&& other) noexcept;
 
     ~Buffer();
 
+    VkBuffer get_buffer() const;
+    void* get_mapped_data() const;
+
   private:
-    MemoryAllocator& allocator;
+    const MemoryAllocator& allocator;
     VkBuffer buf;
     VmaAllocation buf_mem;
+    void* mapped_data{};
+    bool is_local;
   };
 } // namespace tge
 

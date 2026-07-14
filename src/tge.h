@@ -9,5 +9,6 @@
 #include "def.h"
 #include "render/render.h"
 #include "win/win.h"
+#include "file_system/file_system.h"
 
 #endif // __tge_h_

@@ -21,9 +21,8 @@ namespace tge {
     }
 
   protected:
-    template<typename... Vars>
-    InfoTemplate(Vars&&... args)
-        : info(std::forward<Vars>(args)...) {}
+    InfoTemplate(T info)
+        : info(info) {}
 
   private:
     T info;

@@ -15,7 +15,6 @@ tge::MemoryAllocator::MemoryAllocator(
 )
     : device(device) {
   const VmaAllocatorCreateInfo create_info = {
-      .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
       .physicalDevice = physical_device,
       .device = *device,
       .instance = instance
@@ -40,8 +39,4 @@ tge::MemoryAllocator::MemoryAllocator(MemoryAllocator&& other) noexcept
 
 tge::MemoryAllocator::operator VmaAllocator() const {
   return allocator;
-}
-
-tge::Image tge::MemoryAllocator::create_image(const vk::Image img, const vk::Format fmt) {
-  return Image(*this, device, img, fmt);
 }

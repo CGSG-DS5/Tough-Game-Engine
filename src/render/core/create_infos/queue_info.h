@@ -12,7 +12,11 @@ namespace tge {
   class QueueInfo : public InfoTemplate<vk::DeviceQueueCreateInfo> {
   public:
     QueueInfo(vk::PhysicalDevice device, vk::SurfaceKHR surface)
-        : InfoTemplate(vk::DeviceQueueCreateFlags(), get_family_index(device, surface), priority) {}
+        : InfoTemplate(
+              {.queueFamilyIndex = get_family_index(device, surface),
+               .queueCount = 1,
+               .pQueuePriorities = priority.data()}
+          ) {}
 
   private:
     static const std::vector<float> priority;

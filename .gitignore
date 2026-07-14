@@ -4,3 +4,4 @@
 *.sln
 *.exe
 out/*
+*.spv

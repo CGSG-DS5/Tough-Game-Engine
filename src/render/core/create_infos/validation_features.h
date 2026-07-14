@@ -12,7 +12,10 @@ namespace tge {
   class ValidationFeatures : public InfoTemplate<vk::ValidationFeaturesEXT> {
   public:
     ValidationFeatures()
-        : InfoTemplate(enabled_features) {}
+        : InfoTemplate(
+              {.enabledValidationFeatureCount = static_cast<uint32_t>(enabled_features.size()),
+               .pEnabledValidationFeatures = enabled_features.data()}
+          ) {}
 
   private:
     static const std::vector<vk::ValidationFeatureEnableEXT> enabled_features;

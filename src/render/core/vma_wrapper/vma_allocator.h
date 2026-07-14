@@ -27,7 +27,15 @@ namespace tge {
 
     operator VmaAllocator() const;
 
-    Image create_image(const vk::Image img, const vk::Format fmt);
+    template<typename... Args>
+    Image create_image(Args&&... args) const {
+      return Image(*this, device, std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    Buffer create_buffer(Args&&... args) const {
+      return Buffer(*this, std::forward<Args>(args)...);
+    }
 
   private:
     const vk::raii::Device& device;

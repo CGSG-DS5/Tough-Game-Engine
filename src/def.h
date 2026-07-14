@@ -10,12 +10,23 @@
  * STL Libraries
  ***/
 
+#include <algorithm>
 #include <array>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <map>
+#include <optional>
 #include <ranges>
 #include <span>
 #include <string>
 #include <vector>
+
+/***
+ * STB Image Support
+ ***/
+#include "third_party/stb/stb_image.h"
 
 /***
  * SDL Support
@@ -29,6 +40,9 @@
  ***/
 
 #include <vma/vk_mem_alloc.h>
+
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+
 #include <vulkan/vulkan_raii.hpp>
 
 #endif // __tge_def_h_

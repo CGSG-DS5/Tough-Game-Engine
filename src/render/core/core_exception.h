@@ -11,7 +11,7 @@
 namespace tge {
   class CoreException : public std::exception {
   public:
-    CoreException(const std::string& msg, const int32_t code) noexcept
+    CoreException(const std::string& msg, const int32_t code = 30) noexcept
         : message(msg)
         , error_code(code) {}
 

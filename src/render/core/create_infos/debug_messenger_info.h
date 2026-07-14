@@ -13,19 +13,21 @@ namespace tge {
   public:
     DebugMessengerInfo()
         : InfoTemplate(
-              vk::DebugUtilsMessengerCreateFlagsEXT(),
-              vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                  vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-              vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                  vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-              debug_callback
+              {.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+                                  vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                                  vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                  vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+               .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                              vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                              vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+               .pfnUserCallback = debug_callback}
           ) {}
 
   private:
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    static VKAPI_ATTR vk::Bool32 VKAPI_CALL debug_callback(
+        vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        vk::DebugUtilsMessageTypeFlagsEXT messageTypes,
+        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData
     );
   };
