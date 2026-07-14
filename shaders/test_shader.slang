@@ -1,3 +1,8 @@
+/***
+ * Copyright (c) 2026 Tough Game Engine Contributors
+ * SPDX-License-Identifier: MIT
+ **/
+
 struct PushConstants {
     float time;
 }

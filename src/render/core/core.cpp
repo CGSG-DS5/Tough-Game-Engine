@@ -56,7 +56,8 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     , fences(create_fences())
     , image_available_semaphores(create_semaphores(frames_in_flight))
     , render_finished_semaphores(create_semaphores(static_cast<uint32_t>(swapchain_images.size())))
-    , render_command_buffers(create_command_buffers())
+    , render_command_buffers(create_command_buffers(frames_in_flight))
+    , update_command_buffer(std::move(create_command_buffers(1)[0]))
     , /// :TODO: Delete
     tmp_pipeline(GraphicsPipeline(
         graphics_layout,
@@ -69,7 +70,17 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     ))
     , tmp_buffers()
     , render_pass_factory(allocator, device)
-    , tmp_render_pass(render_pass_factory.create_gbuffer_pass(screen_size, 2, frames_in_flight)) {
+    , tmp_render_pass(render_pass_factory.create_gbuffer_pass(screen_size, 2, frames_in_flight))
+    , tmp_img(
+          allocator,
+          device,
+          vk::Format::eR32G32B32A32Sfloat,
+          {2, 2, 1},
+          1,
+          vk::SampleCountFlagBits::e1,
+          vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
+          false
+      ) {
   tmp_buffers.reserve(frames_in_flight);
   for (uint32_t i = 0; i < frames_in_flight; i++) {
     tmp_buffers.emplace_back(allocator, 4, false, vk::BufferUsageFlagBits::eUniformBuffer);
@@ -88,6 +99,24 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
 
     device.updateDescriptorSets(descriptor_write, {});
   }
+
+  for (size_t i = 0; i < frames_in_flight; i++) {
+    vk::DescriptorImageInfo image_info{.imageView = tmp_img.get_image_view(), .imageLayout = tmp_img.get_image_layout()};
+    vk::WriteDescriptorSet descriptor_write{
+        .dstSet = descriptor_sets.at(DescriptorSetLayoutType::MATERIAL)[i],
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eSampledImage,
+        .pImageInfo = &image_info
+    };
+
+    //device.updateDescriptorSets(descriptor_write, {});
+  }
+
+  std::vector<float> tmp_data{1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1};
+
+  update_image({reinterpret_cast<const char*>(tmp_data.data()), tmp_data.size() * sizeof(float)}, tmp_img);
 }
 
 tge::Core::~Core() {
@@ -247,6 +276,11 @@ tge::Core::get_layout_bindings() {
          .descriptorType = vk::DescriptorType::eStorageBuffer,
          .descriptorCount = 3,
          .stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex}}},
+      {DescriptorSetLayoutType::MATERIAL,
+       {{.binding = 0,
+         .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+         .descriptorCount = 1,
+         .stageFlags = vk::ShaderStageFlagBits::eFragment}}},
       {DescriptorSetLayoutType::FINAL,
        {{.binding = 0,
          .descriptorType = vk::DescriptorType::eCombinedImageSampler,
@@ -294,8 +328,7 @@ vk::raii::DescriptorPool tge::Core::create_descriptor_pool() {
   }
 
   return device.createDescriptorPool(
-      {.flags =
-           vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+      {.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
        .maxSets = max_sets,
        .poolSizeCount = static_cast<uint32_t>(sizes.size()),
        .pPoolSizes = sizes.data()}
@@ -345,17 +378,63 @@ std::vector<vk::raii::Semaphore> tge::Core::create_semaphores(uint32_t num) {
   return result;
 }
 
-std::vector<vk::raii::CommandBuffer> tge::Core::create_command_buffers() {
+std::vector<vk::raii::CommandBuffer> tge::Core::create_command_buffers(uint32_t num) {
   return device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{
       .commandPool = command_pool,
       .level = vk::CommandBufferLevel::ePrimary,
-      .commandBufferCount = frames_in_flight
+      .commandBufferCount = num
   });
+}
+
+void tge::Core::update_image(std::span<const char> data, Image& img) {
+  update_command_buffer_data.push_back(
+      {img,
+       {.bufferOffset = static_cast<uint32_t>(update_data.size()),
+        .bufferRowLength = 0,
+        .bufferImageHeight = 0,
+        .imageSubresource =
+            {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1},
+        .imageOffset = {0, 0, 0},
+        .imageExtent = img.get_image_sizes()}}
+  );
+
+  update_data.insert(update_data.end(), data.begin(), data.end());
+}
+
+void tge::Core::submit_update_buffer() {
+  if (update_data.empty()) {
+    return;
+  }
+
+  Buffer staging_buffer(
+      allocator,
+      static_cast<uint32_t>(update_data.size()),
+      false,
+      vk::BufferUsageFlagBits::eTransferSrc
+  );
+  std::memcpy(staging_buffer.get_mapped_data(), update_data.data(), update_data.size());
+
+  update_command_buffer.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
+  for (auto& [img, region] : update_command_buffer_data) {
+    img.switch_layout(update_command_buffer, vk::ImageLayout::eTransferDstOptimal);
+    update_command_buffer
+        .copyBufferToImage(staging_buffer.get_buffer(), img.get_image(), vk::ImageLayout::eTransferDstOptimal, region);
+    img.switch_layout(update_command_buffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+  }
+  update_command_buffer.end();
+
+  vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*update_command_buffer};
+  queue.submit(submitInfo, nullptr);
+  queue.waitIdle();
+
+  update_data.clear();
 }
 
 #include <ctime>
 
 void tge::Core::frame_start() {
+  submit_update_buffer();
+
   if (vk::Result res = device.waitForFences(*fences[frame_index], 1, UINT64_MAX); res != vk::Result::eSuccess) {
     throw CoreException("Wait for fence error", static_cast<int32_t>(res));
   }

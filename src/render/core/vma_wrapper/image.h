@@ -46,9 +46,10 @@ namespace tge {
 
     vk::Image get_image() const;
     vk::ImageView get_image_view() const;
+    vk::ImageLayout get_image_layout() const;
+    vk::Extent3D get_image_sizes() const;
 
     void switch_layout(vk::CommandBuffer cmd_buf, vk::ImageLayout new_layout);
-
 
   private:
     const MemoryAllocator& allocator;
@@ -57,6 +58,7 @@ namespace tge {
     vk::raii::ImageView image_view;
     vk::ImageLayout image_layout{vk::ImageLayout::eUndefined};
     vk::Format format;
+    vk::Extent3D image_sizes{};
 
     vk::raii::ImageView create_image_view(
         const vk::raii::Device& device,

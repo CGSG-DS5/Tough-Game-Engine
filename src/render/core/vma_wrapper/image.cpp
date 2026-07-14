@@ -95,7 +95,8 @@ tge::Image::Image(
           get_mip_count(mip_count, extent),
           is_cube ? 6u : 1u
       ))
-    , format(fmt) {}
+    , format(fmt)
+    , image_sizes(extent) {}
 
 VkImage tge::Image::create_image(
     const MemoryAllocator& alloc,
@@ -171,6 +172,14 @@ vk::Image tge::Image::get_image() const {
   return image_handle;
 }
 
+vk::ImageLayout tge::Image::get_image_layout() const {
+  return image_layout;
+}
+
+vk::Extent3D tge::Image::get_image_sizes() const {
+  return image_sizes;
+}
+
 std::pair<vk::PipelineStageFlags2, vk::AccessFlags2> tge::Image::get_stage_acess(const vk::ImageLayout layout) {
   switch (layout) {
   case vk::ImageLayout::eUndefined:
@@ -184,6 +193,16 @@ std::pair<vk::PipelineStageFlags2, vk::AccessFlags2> tge::Image::get_stage_acess
     return {
         vk::PipelineStageFlagBits2::eEarlyFragmentTests,
         vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+    };
+  case vk::ImageLayout::eTransferDstOptimal:
+    return {
+        vk::PipelineStageFlagBits2::eTransfer,
+        vk::AccessFlagBits2::eTransferWrite
+    };
+  case vk::ImageLayout::eShaderReadOnlyOptimal:
+    return {
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderRead
     };
   }
 

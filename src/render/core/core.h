@@ -17,7 +17,12 @@ namespace tge {
   public:
     enum struct DescriptorSetLayoutType : uint32_t {
       RENDER = 0,
-      FINAL = 1,
+      MATERIAL = 1,
+      FINAL = 2,
+    };
+
+    enum struct SamplerType : uint32_t {
+      DEFAULT = 0,
     };
 
     Core(SDL_Window* window, bool vsync, bool triple_buffer);
@@ -29,6 +34,8 @@ namespace tge {
     void frame_end();
 
     const vk::raii::CommandBuffer& get_render_cmd_buf() const;
+
+    void update_image(std::span<const char> data, Image& img);
 
   private:
     const vk::raii::Context context{};
@@ -65,6 +72,12 @@ namespace tge {
     const std::vector<vk::raii::Semaphore> render_finished_semaphores;
     const std::vector<vk::raii::CommandBuffer> render_command_buffers;
 
+    const vk::raii::CommandBuffer update_command_buffer;
+    std::vector<char> update_data{};
+    std::vector<std::pair<Image&, vk::BufferImageCopy>> update_command_buffer_data{};
+
+    std::map<SamplerType, vk::raii::Sampler> samplers;
+
     uint32_t frame_index{};
     uint32_t image_index{};
 
@@ -77,6 +90,8 @@ namespace tge {
 
     RenderPassFactory render_pass_factory;
     RenderPass tmp_render_pass;
+
+    Image tmp_img;
 
     //////// NEW CODE
 
@@ -103,7 +118,9 @@ namespace tge {
 
     std::vector<vk::raii::Fence> create_fences();
     std::vector<vk::raii::Semaphore> create_semaphores(uint32_t num);
-    std::vector<vk::raii::CommandBuffer> create_command_buffers();
+    std::vector<vk::raii::CommandBuffer> create_command_buffers(uint32_t num);
+
+    void submit_update_buffer();
   };
 } // namespace tge
 

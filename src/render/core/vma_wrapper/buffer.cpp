@@ -73,3 +73,4 @@ VkBuffer tge::Buffer::get_buffer() const {
 void* tge::Buffer::get_mapped_data() const {
   return mapped_data;
 }
+
