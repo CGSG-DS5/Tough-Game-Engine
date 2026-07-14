@@ -39,7 +39,7 @@ namespace tge {
 
   private:
     VulkanContext ctx;
-    std::vector<RaiiSurface> surfaces;
+    std::vector<Surface> surfaces;
     Device device;
     MemoryAllocator allocator;
 
@@ -89,7 +89,7 @@ namespace tge {
 
     //////// NEW CODE
 
-    std::vector<RaiiSurface> create_surfaces(std::span<SDL_Window*> windows) const;
+    std::vector<Surface> create_surfaces(std::span<SDL_Window*> windows) const;
 
     uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();

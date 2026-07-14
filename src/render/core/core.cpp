@@ -30,10 +30,10 @@ tge::Core::Core(std::span<SDL_Window*> windows, bool vsync, bool triple_buffer)
     : ctx()
     , surfaces(create_surfaces(windows))
     , device(ctx.physical_device(), surfaces)
+    , allocator(ctx.instance(), ctx.physical_device(), device)
     , device_present_mask(device->getGroupPresentCapabilitiesKHR().presentMask[0])
     , queue_family_index(get_queue_family_index())
     , queue(create_queue())
-    , allocator(ctx.instance(), ctx.physical_device(), device)
     , swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer))
     , swapchain(create_swapchain())
     , swapchain_images(create_swapchain_images())
@@ -123,8 +123,8 @@ tge::Core::~Core() {
   queue.waitIdle();
 }
 
-std::vector<tge::RaiiSurface> tge::Core::create_surfaces(std::span<SDL_Window*> windows) const {
-  std::vector<RaiiSurface> surfs;
+std::vector<tge::Surface> tge::Core::create_surfaces(std::span<SDL_Window*> windows) const {
+  std::vector<Surface> surfs;
   surfs.reserve(windows.size());
   for (auto win : windows) {
     surfs.emplace_back(ctx.instance(), win);

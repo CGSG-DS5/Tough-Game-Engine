@@ -11,7 +11,7 @@
 namespace tge {
   class Device {
   public:
-    Device(vk::raii::PhysicalDevice physical_device, std::span<RaiiSurface> surfaces);
+    Device(vk::raii::PhysicalDevice physical_device, std::span<Surface> surfaces);
 
     operator const vk::raii::Device&() const;
     const vk::raii::Device& operator*() const;
@@ -20,7 +20,7 @@ namespace tge {
   private:
     vk::raii::Device device;
 
-    vk::raii::Device create_device(vk::raii::PhysicalDevice physical_device, std::span<RaiiSurface> surfaces) const;
+    vk::raii::Device create_device(vk::raii::PhysicalDevice physical_device, std::span<Surface> surfaces) const;
   };
 } // namespace tge
 

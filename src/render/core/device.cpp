@@ -5,7 +5,7 @@
 
 #include "tge.h"
 
-tge::Device::Device(vk::raii::PhysicalDevice physical_device, std::span<RaiiSurface> surfaces)
+tge::Device::Device(vk::raii::PhysicalDevice physical_device, std::span<Surface> surfaces)
     : device(create_device(physical_device, surfaces)) {}
 
 tge::Device::operator const vk::raii::Device&() const {
@@ -21,7 +21,7 @@ const vk::raii::Device* tge::Device::operator->() const {
 }
 
 vk::raii::Device
-tge::Device::create_device(vk::raii::PhysicalDevice physical_device, std::span<RaiiSurface> surfaces) const {
+tge::Device::create_device(vk::raii::PhysicalDevice physical_device, std::span<Surface> surfaces) const {
   std::vector<vk::DeviceQueueCreateInfo> queue_info;
   for (uint32_t i = 0; i < surfaces.size(); i++) {
     queue_info.push_back(QueueInfo(physical_device, surfaces[i]).get());
