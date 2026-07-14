@@ -7,6 +7,7 @@
 #define __tge_core_h_
 
 #include "create_infos/infos.h"
+#include "vulkan_context.h"
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
 #include "surface.h"
@@ -19,10 +20,6 @@ namespace tge {
       RENDER = 0,
       MATERIAL = 1,
       FINAL = 2,
-    };
-
-    enum struct SamplerType : uint32_t {
-      DEFAULT = 0,
     };
 
     Core(SDL_Window* window, bool vsync, bool triple_buffer);
@@ -38,17 +35,14 @@ namespace tge {
     void update_image(std::span<const char> data, Image& img);
 
   private:
-    const vk::raii::Context context{};
+    VulkanContext ctx;
 
-    const vk::raii::Instance instance;
-    const vk::raii::DebugUtilsMessengerEXT debug_messenger;
-    const vk::raii::PhysicalDevice physical_device;
     const RaiiSurface surface;
     const vk::raii::Device device;
+    const MemoryAllocator allocator;
     const uint32_t device_present_mask;
     const uint32_t queue_family_index;
     const vk::raii::Queue queue;
-    const MemoryAllocator allocator;
 
     vk::Extent2D screen_size;
     const vk::PresentModeKHR swapchain_present_mode;
@@ -76,8 +70,6 @@ namespace tge {
     std::vector<char> update_data{};
     std::vector<std::pair<Image&, vk::BufferImageCopy>> update_command_buffer_data{};
 
-    std::map<SamplerType, vk::raii::Sampler> samplers;
-
     uint32_t frame_index{};
     uint32_t image_index{};
 
@@ -95,9 +87,6 @@ namespace tge {
 
     //////// NEW CODE
 
-    vk::raii::Instance create_instance();
-    vk::raii::DebugUtilsMessengerEXT create_debugger();
-    vk::raii::PhysicalDevice create_physical_device();
     vk::raii::Device create_device(SDL_Window* window);
     uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();

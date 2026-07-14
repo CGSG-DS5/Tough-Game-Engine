@@ -27,10 +27,8 @@ auto get_handle_from_raii(const std::map<S, std::vector<T>>& data) {
 }
 
 tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
-    : instance(create_instance())
-    , debug_messenger(create_debugger())
-    , physical_device(create_physical_device())
-    , surface(*instance, window)
+    : ctx()
+    , surface(ctx.instance(), window)
     , device(create_device(window))
     , device_present_mask(device.getGroupPresentCapabilitiesKHR().presentMask[0])
     , queue_family_index(get_queue_family_index())
@@ -101,7 +99,10 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
   }
 
   for (size_t i = 0; i < frames_in_flight; i++) {
-    vk::DescriptorImageInfo image_info{.imageView = tmp_img.get_image_view(), .imageLayout = tmp_img.get_image_layout()};
+    vk::DescriptorImageInfo image_info{
+        .imageView = tmp_img.get_image_view(),
+        .imageLayout = tmp_img.get_image_layout()
+    };
     vk::WriteDescriptorSet descriptor_write{
         .dstSet = descriptor_sets.at(DescriptorSetLayoutType::MATERIAL)[i],
         .dstBinding = 0,
@@ -111,7 +112,7 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
         .pImageInfo = &image_info
     };
 
-    //device.updateDescriptorSets(descriptor_write, {});
+    // device.updateDescriptorSets(descriptor_write, {});
   }
 
   std::vector<float> tmp_data{1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1};
@@ -123,48 +124,9 @@ tge::Core::~Core() {
   queue.waitIdle();
 }
 
-vk::raii::Instance tge::Core::create_instance() {
-  return context.createInstance(vk::InstanceCreateInfo{
-      .pApplicationInfo = &ApplicationInfo().get(),
-      .enabledLayerCount = static_cast<uint32_t>(Layers(context).get().size()),
-      .ppEnabledLayerNames = Layers(context).get().data(),
-      .enabledExtensionCount = static_cast<uint32_t>(InstanceExtensions(context).get().size()),
-      .ppEnabledExtensionNames = InstanceExtensions(context).get().data(),
-  }
-#ifdef VALIDATION
-                                    .setPNext(&DebugMessengerInfo().get().setPNext(&ValidationFeatures().get()))
-#endif // VALIDATION
-  );
-}
-
-vk::raii::DebugUtilsMessengerEXT tge::Core::create_debugger() {
-#ifdef VALIDATION
-  return instance.createDebugUtilsMessengerEXT(DebugMessengerInfo().get());
-#else // VALIDATION
-  return nullptr;
-#endif // VALIDATION
-}
-
-static int64_t get_physical_device_score(const vk::raii::PhysicalDevice& device) {
-  int64_t score = 0;
-
-  vk::PhysicalDeviceProperties props = device.getProperties();
-
-  if (props.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
-    score += 100000;
-  }
-
-  score += props.limits.maxImageDimension2D;
-
-  return score;
-}
-
-vk::raii::PhysicalDevice tge::Core::create_physical_device() {
-  return std::ranges::max(instance.enumeratePhysicalDevices(), std::less(), get_physical_device_score);
-}
-
 vk::raii::Device tge::Core::create_device(SDL_Window* window) {
-  auto device_exts = DeviceExtensions(physical_device).get();
+  auto queue_info = QueueInfo(ctx.physical_device(), surface).get();
+  auto device_exts = DeviceExtensions(ctx.physical_device()).get();
   vk::PhysicalDeviceFeatures device_features{.fullDrawIndexUint32 = true, .geometryShader = true};
   vk::StructureChain<
       vk::DeviceCreateInfo,
@@ -173,7 +135,7 @@ vk::raii::Device tge::Core::create_device(SDL_Window* window) {
       device_create_info{
           {
               .queueCreateInfoCount = 1,
-              .pQueueCreateInfos = &QueueInfo(physical_device, surface).get(),
+              .pQueueCreateInfos = &queue_info,
               .enabledExtensionCount = static_cast<uint32_t>(device_exts.size()),
               .ppEnabledExtensionNames = device_exts.data(),
               .pEnabledFeatures = &device_features,
@@ -182,11 +144,11 @@ vk::raii::Device tge::Core::create_device(SDL_Window* window) {
           {.dynamicRendering = true}
       };
 
-  return physical_device.createDevice(device_create_info.get<vk::DeviceCreateInfo>());
+  return vk::raii::Device(ctx.physical_device(), device_create_info.get<vk::DeviceCreateInfo>());
 }
 
 uint32_t tge::Core::get_queue_family_index() {
-  return QueueInfo(physical_device, surface).get().queueFamilyIndex;
+  return QueueInfo(ctx.physical_device(), surface).get().queueFamilyIndex;
 }
 
 vk::raii::Queue tge::Core::create_queue() {
@@ -194,7 +156,7 @@ vk::raii::Queue tge::Core::create_queue() {
 }
 
 tge::MemoryAllocator tge::Core::create_allocator() {
-  return MemoryAllocator(instance, physical_device, device);
+  return MemoryAllocator(ctx.instance(), ctx.physical_device(), device);
 }
 
 /***
@@ -202,7 +164,7 @@ tge::MemoryAllocator tge::Core::create_allocator() {
  ***/
 
 vk::PresentModeKHR tge::Core::get_swapchain_present_mode(const bool vsync, const bool triple_buffer) {
-  const std::vector<vk::PresentModeKHR> modes = physical_device.getSurfacePresentModesKHR(surface);
+  const std::vector<vk::PresentModeKHR> modes = ctx.physical_device().getSurfacePresentModesKHR(surface);
 
   bool immediate = false, mailbox = false;
 
@@ -230,12 +192,12 @@ vk::PresentModeKHR tge::Core::get_swapchain_present_mode(const bool vsync, const
 }
 
 vk::raii::SwapchainKHR tge::Core::create_swapchain() {
-  screen_size = physical_device.getSurfaceCapabilitiesKHR(surface).currentExtent;
+  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surface).currentExtent;
 
   // trick to supress useless vulkan warnings
-  auto tmp = physical_device.getSurfaceFormatsKHR(surface);
+  auto tmp = ctx.physical_device().getSurfaceFormatsKHR(surface);
 
-  return device.createSwapchainKHR(SwapchainInfo(physical_device, surface, screen_size, swapchain_present_mode).get());
+  return device.createSwapchainKHR(SwapchainInfo(ctx.physical_device(), surface, screen_size, swapchain_present_mode).get());
 }
 
 std::vector<tge::Image> tge::Core::create_swapchain_images() {
@@ -253,9 +215,9 @@ std::vector<tge::Image> tge::Core::create_swapchain_images() {
 void tge::Core::resize() {
   swapchain_images.clear();
 
-  screen_size = physical_device.getSurfaceCapabilitiesKHR(surface).currentExtent;
+  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surface).currentExtent;
   swapchain = device.createSwapchainKHR(
-      SwapchainInfo(physical_device, surface, screen_size, swapchain_present_mode, swapchain).get()
+      SwapchainInfo(ctx.physical_device(), surface, screen_size, swapchain_present_mode, swapchain).get()
   );
 
   swapchain_images = create_swapchain_images();
