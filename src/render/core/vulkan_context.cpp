@@ -18,7 +18,7 @@ const vk::raii::PhysicalDevice& tge::VulkanContext::physical_device() const {
   return m_physical_device;
 }
 
-vk::raii::Instance tge::VulkanContext::create_instance() {
+vk::raii::Instance tge::VulkanContext::create_instance() const {
   return context.createInstance(
       vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT, vk::ValidationFeaturesEXT>{
           {
@@ -51,7 +51,7 @@ vk::raii::Instance tge::VulkanContext::create_instance() {
   );
 }
 
-vk::raii::DebugUtilsMessengerEXT tge::VulkanContext::create_debugger() {
+vk::raii::DebugUtilsMessengerEXT tge::VulkanContext::create_debugger() const {
 #ifdef VALIDATION
   return m_instance.createDebugUtilsMessengerEXT(DebugMessengerInfo().get());
 #else // VALIDATION
@@ -73,6 +73,6 @@ static int64_t get_physical_device_score(const vk::raii::PhysicalDevice& device)
   return score;
 }
 
-vk::raii::PhysicalDevice tge::VulkanContext::create_physical_device() {
+vk::raii::PhysicalDevice tge::VulkanContext::create_physical_device() const {
   return std::ranges::max(m_instance.enumeratePhysicalDevices(), std::less(), get_physical_device_score);
 }

@@ -26,16 +26,15 @@ auto get_handle_from_raii(const std::map<S, std::vector<T>>& data) {
   return result;
 }
 
-tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
+tge::Core::Core(std::span<SDL_Window*> windows, bool vsync, bool triple_buffer)
     : ctx()
-    , surface(ctx.instance(), window)
-    , device(create_device(window))
-    , device_present_mask(device.getGroupPresentCapabilitiesKHR().presentMask[0])
+    , surfaces(create_surfaces(windows))
+    , device(ctx.physical_device(), surfaces)
+    , device_present_mask(device->getGroupPresentCapabilitiesKHR().presentMask[0])
     , queue_family_index(get_queue_family_index())
     , queue(create_queue())
-    , allocator(create_allocator())
+    , allocator(ctx.instance(), ctx.physical_device(), device)
     , swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer))
-    , frames_in_flight(2)
     , swapchain(create_swapchain())
     , swapchain_images(create_swapchain_images())
     , descriptor_set_layouts_raii(create_descriptor_set_layout())
@@ -95,7 +94,7 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
         .pBufferInfo = &buffer_info
     };
 
-    device.updateDescriptorSets(descriptor_write, {});
+    device->updateDescriptorSets(descriptor_write, {});
   }
 
   for (size_t i = 0; i < frames_in_flight; i++) {
@@ -124,39 +123,22 @@ tge::Core::~Core() {
   queue.waitIdle();
 }
 
-vk::raii::Device tge::Core::create_device(SDL_Window* window) {
-  auto queue_info = QueueInfo(ctx.physical_device(), surface).get();
-  auto device_exts = DeviceExtensions(ctx.physical_device()).get();
-  vk::PhysicalDeviceFeatures device_features{.fullDrawIndexUint32 = true, .geometryShader = true};
-  vk::StructureChain<
-      vk::DeviceCreateInfo,
-      vk::PhysicalDeviceSynchronization2Features,
-      vk::PhysicalDeviceDynamicRenderingFeatures>
-      device_create_info{
-          {
-              .queueCreateInfoCount = 1,
-              .pQueueCreateInfos = &queue_info,
-              .enabledExtensionCount = static_cast<uint32_t>(device_exts.size()),
-              .ppEnabledExtensionNames = device_exts.data(),
-              .pEnabledFeatures = &device_features,
-          },
-          {.synchronization2 = true},
-          {.dynamicRendering = true}
-      };
+std::vector<tge::RaiiSurface> tge::Core::create_surfaces(std::span<SDL_Window*> windows) const {
+  std::vector<RaiiSurface> surfs;
+  surfs.reserve(windows.size());
+  for (auto win : windows) {
+    surfs.emplace_back(ctx.instance(), win);
+  }
 
-  return vk::raii::Device(ctx.physical_device(), device_create_info.get<vk::DeviceCreateInfo>());
+  return surfs;
 }
 
 uint32_t tge::Core::get_queue_family_index() {
-  return QueueInfo(ctx.physical_device(), surface).get().queueFamilyIndex;
+  return QueueInfo(ctx.physical_device(), surfaces[0]).get().queueFamilyIndex;
 }
 
 vk::raii::Queue tge::Core::create_queue() {
-  return device.getQueue(queue_family_index, 0);
-}
-
-tge::MemoryAllocator tge::Core::create_allocator() {
-  return MemoryAllocator(ctx.instance(), ctx.physical_device(), device);
+  return device->getQueue(queue_family_index, 0);
 }
 
 /***
@@ -164,7 +146,7 @@ tge::MemoryAllocator tge::Core::create_allocator() {
  ***/
 
 vk::PresentModeKHR tge::Core::get_swapchain_present_mode(const bool vsync, const bool triple_buffer) {
-  const std::vector<vk::PresentModeKHR> modes = ctx.physical_device().getSurfacePresentModesKHR(surface);
+  const std::vector<vk::PresentModeKHR> modes = ctx.physical_device().getSurfacePresentModesKHR(surfaces[0]);
 
   bool immediate = false, mailbox = false;
 
@@ -192,12 +174,12 @@ vk::PresentModeKHR tge::Core::get_swapchain_present_mode(const bool vsync, const
 }
 
 vk::raii::SwapchainKHR tge::Core::create_swapchain() {
-  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surface).currentExtent;
+  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surfaces[0]).currentExtent;
 
   // trick to supress useless vulkan warnings
-  auto tmp = ctx.physical_device().getSurfaceFormatsKHR(surface);
+  auto tmp = ctx.physical_device().getSurfaceFormatsKHR(surfaces[0]);
 
-  return device.createSwapchainKHR(SwapchainInfo(ctx.physical_device(), surface, screen_size, swapchain_present_mode).get());
+  return device->createSwapchainKHR(SwapchainInfo(ctx.physical_device(), surfaces[0], screen_size, swapchain_present_mode).get());
 }
 
 std::vector<tge::Image> tge::Core::create_swapchain_images() {
@@ -215,9 +197,9 @@ std::vector<tge::Image> tge::Core::create_swapchain_images() {
 void tge::Core::resize() {
   swapchain_images.clear();
 
-  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surface).currentExtent;
-  swapchain = device.createSwapchainKHR(
-      SwapchainInfo(ctx.physical_device(), surface, screen_size, swapchain_present_mode, swapchain).get()
+  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surfaces[0]).currentExtent;
+  swapchain = device->createSwapchainKHR(
+      SwapchainInfo(ctx.physical_device(), surfaces[0], screen_size, swapchain_present_mode, swapchain).get()
   );
 
   swapchain_images = create_swapchain_images();
@@ -270,7 +252,7 @@ std::vector<vk::raii::DescriptorSetLayout> tge::Core::create_descriptor_set_layo
 }
 
 vk::raii::CommandPool tge::Core::create_command_pool() {
-  return device.createCommandPool(
+  return device->createCommandPool(
       {.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer, .queueFamilyIndex = queue_family_index}
   );
 }
@@ -289,7 +271,7 @@ vk::raii::DescriptorPool tge::Core::create_descriptor_pool() {
     }
   }
 
-  return device.createDescriptorPool(
+  return device->createDescriptorPool(
       {.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
        .maxSets = max_sets,
        .poolSizeCount = static_cast<uint32_t>(sizes.size()),
@@ -311,7 +293,7 @@ tge::Core::create_all_descriptor_sets() {
 std::vector<vk::raii::DescriptorSet> tge::Core::create_descriptor_sets(DescriptorSetLayoutType type) {
   std::vector<vk::DescriptorSetLayout> layouts(frames_in_flight, descriptor_set_layouts[static_cast<uint32_t>(type)]);
 
-  return device.allocateDescriptorSets(
+  return device->allocateDescriptorSets(
       {.descriptorPool = descriptor_pool,
        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
        .pSetLayouts = layouts.data()}
@@ -323,7 +305,7 @@ std::vector<vk::raii::Fence> tge::Core::create_fences() {
   result.reserve(frames_in_flight);
 
   for (int32_t i = 0; i < frames_in_flight; i++) {
-    result.emplace_back(device.createFence({.flags = vk::FenceCreateFlagBits::eSignaled}));
+    result.emplace_back(device->createFence({.flags = vk::FenceCreateFlagBits::eSignaled}));
   }
 
   return result;
@@ -334,14 +316,14 @@ std::vector<vk::raii::Semaphore> tge::Core::create_semaphores(uint32_t num) {
   result.reserve(num);
 
   for (int32_t i = 0; i < num; i++) {
-    result.emplace_back(device.createSemaphore(vk::SemaphoreCreateInfo()));
+    result.emplace_back(device->createSemaphore(vk::SemaphoreCreateInfo()));
   }
 
   return result;
 }
 
 std::vector<vk::raii::CommandBuffer> tge::Core::create_command_buffers(uint32_t num) {
-  return device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{
+  return device->allocateCommandBuffers(vk::CommandBufferAllocateInfo{
       .commandPool = command_pool,
       .level = vk::CommandBufferLevel::ePrimary,
       .commandBufferCount = num
@@ -397,12 +379,12 @@ void tge::Core::submit_update_buffer() {
 void tge::Core::frame_start() {
   submit_update_buffer();
 
-  if (vk::Result res = device.waitForFences(*fences[frame_index], 1, UINT64_MAX); res != vk::Result::eSuccess) {
+  if (vk::Result res = device->waitForFences(*fences[frame_index], 1, UINT64_MAX); res != vk::Result::eSuccess) {
     throw CoreException("Wait for fence error", static_cast<int32_t>(res));
   }
-  device.resetFences(*fences[frame_index]);
+  device->resetFences(*fences[frame_index]);
 
-  auto [res, new_image_index] = device.acquireNextImage2KHR(
+  auto [res, new_image_index] = device->acquireNextImage2KHR(
       {.swapchain = swapchain,
        .timeout = UINT64_MAX,
        .semaphore = image_available_semaphores[frame_index],

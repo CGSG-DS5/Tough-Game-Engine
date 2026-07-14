@@ -7,22 +7,25 @@
 #define __tge_core_h_
 
 #include "create_infos/infos.h"
-#include "vulkan_context.h"
+#include "device.h"
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
 #include "surface.h"
 #include "vma_wrapper/vma_allocator.h"
+#include "vulkan_context.h"
 
 namespace tge {
   class Core {
   public:
+    static constexpr uint32_t frames_in_flight = 2;
+
     enum struct DescriptorSetLayoutType : uint32_t {
       RENDER = 0,
       MATERIAL = 1,
       FINAL = 2,
     };
 
-    Core(SDL_Window* window, bool vsync, bool triple_buffer);
+    Core(std::span<SDL_Window*> windows, bool vsync, bool triple_buffer);
     ~Core();
 
     void resize();
@@ -36,17 +39,12 @@ namespace tge {
 
   private:
     VulkanContext ctx;
-
-    const RaiiSurface surface;
-    const vk::raii::Device device;
-    const MemoryAllocator allocator;
-    const uint32_t device_present_mask;
-    const uint32_t queue_family_index;
-    const vk::raii::Queue queue;
+    std::vector<RaiiSurface> surfaces;
+    Device device;
+    MemoryAllocator allocator;
 
     vk::Extent2D screen_size;
     const vk::PresentModeKHR swapchain_present_mode;
-    const uint32_t frames_in_flight;
     vk::raii::SwapchainKHR swapchain;
     std::vector<Image> swapchain_images;
 
@@ -54,6 +52,10 @@ namespace tge {
     const std::vector<vk::DescriptorSetLayout> descriptor_set_layouts;
     const vk::PushConstantRange push_constant_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
     const vk::raii::PipelineLayout graphics_layout;
+
+    const uint32_t device_present_mask;
+    const uint32_t queue_family_index;
+    const vk::raii::Queue queue;
 
     const vk::raii::CommandPool command_pool;
     const vk::raii::DescriptorPool descriptor_pool;
@@ -87,10 +89,10 @@ namespace tge {
 
     //////// NEW CODE
 
-    vk::raii::Device create_device(SDL_Window* window);
+    std::vector<RaiiSurface> create_surfaces(std::span<SDL_Window*> windows) const;
+
     uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();
-    MemoryAllocator create_allocator();
 
     vk::PresentModeKHR get_swapchain_present_mode(bool vsync, bool triple_buffer);
     vk::raii::SwapchainKHR create_swapchain();

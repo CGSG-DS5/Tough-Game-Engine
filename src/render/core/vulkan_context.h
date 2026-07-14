@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
+#ifndef __tge_vulkan_context_h_
+#define __tge_vulkan_context_h_
+
 #include "core_exception.h"
 
 namespace tge {
@@ -19,8 +22,11 @@ namespace tge {
     vk::raii::DebugUtilsMessengerEXT m_debug_messenger;
     vk::raii::PhysicalDevice m_physical_device;
 
-    vk::raii::Instance create_instance();
-    vk::raii::DebugUtilsMessengerEXT create_debugger();
-    vk::raii::PhysicalDevice create_physical_device();
+    vk::raii::Instance create_instance() const;
+    vk::raii::DebugUtilsMessengerEXT create_debugger() const;
+    vk::raii::PhysicalDevice create_physical_device() const;
   };
 } // namespace tge
+
+#endif // __tge_surface_h_
+
