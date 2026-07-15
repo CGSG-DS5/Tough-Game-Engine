@@ -26,17 +26,15 @@ auto get_handle_from_raii(const std::map<S, std::vector<T>>& data) {
   return result;
 }
 
-tge::Core::Core(std::span<SDL_Window*> windows, bool vsync, bool triple_buffer)
+tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     : ctx()
-    , surfaces(create_surfaces(windows))
-    , device(ctx.physical_device(), surfaces)
+    , surface(ctx.instance(), window)
+    , device(ctx.physical_device(), surface)
     , allocator(ctx.instance(), ctx.physical_device(), device)
-    , device_present_mask(device->getGroupPresentCapabilitiesKHR().presentMask[0])
+    , swapchain(ctx.physical_device(), device, surface, allocator, vsync, triple_buffer)
+    , frames_in_flight(swapchain.num_of_images() - 1)
     , queue_family_index(get_queue_family_index())
     , queue(create_queue())
-    , swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer))
-    , swapchain(create_swapchain())
-    , swapchain_images(create_swapchain_images())
     , descriptor_set_layouts_raii(create_descriptor_set_layout())
     , descriptor_set_layouts(get_handle_from_raii(descriptor_set_layouts_raii))
     , graphics_layout(
@@ -52,7 +50,6 @@ tge::Core::Core(std::span<SDL_Window*> windows, bool vsync, bool triple_buffer)
     , descriptor_sets(get_handle_from_raii(descriptor_sets_raii))
     , fences(create_fences())
     , image_available_semaphores(create_semaphores(frames_in_flight))
-    , render_finished_semaphores(create_semaphores(static_cast<uint32_t>(swapchain_images.size())))
     , render_command_buffers(create_command_buffers(frames_in_flight))
     , update_command_buffer(std::move(create_command_buffers(1)[0]))
     , /// :TODO: Delete
@@ -67,7 +64,7 @@ tge::Core::Core(std::span<SDL_Window*> windows, bool vsync, bool triple_buffer)
     ))
     , tmp_buffers()
     , render_pass_factory(allocator, device)
-    , tmp_render_pass(render_pass_factory.create_gbuffer_pass(screen_size, 2, frames_in_flight))
+    , tmp_render_pass(render_pass_factory.create_gbuffer_pass(swapchain.screen_size(), 2, frames_in_flight))
     , tmp_img(
           allocator,
           device,
@@ -123,18 +120,8 @@ tge::Core::~Core() {
   queue.waitIdle();
 }
 
-std::vector<tge::Surface> tge::Core::create_surfaces(std::span<SDL_Window*> windows) const {
-  std::vector<Surface> surfs;
-  surfs.reserve(windows.size());
-  for (auto win : windows) {
-    surfs.emplace_back(ctx.instance(), win);
-  }
-
-  return surfs;
-}
-
 uint32_t tge::Core::get_queue_family_index() {
-  return QueueInfo(ctx.physical_device(), surfaces[0]).get().queueFamilyIndex;
+  return QueueInfo(ctx.physical_device(), surface).get().queueFamilyIndex;
 }
 
 vk::raii::Queue tge::Core::create_queue() {
@@ -145,67 +132,11 @@ vk::raii::Queue tge::Core::create_queue() {
  * Swapchain
  ***/
 
-vk::PresentModeKHR tge::Core::get_swapchain_present_mode(const bool vsync, const bool triple_buffer) {
-  const std::vector<vk::PresentModeKHR> modes = ctx.physical_device().getSurfacePresentModesKHR(surfaces[0]);
-
-  bool immediate = false, mailbox = false;
-
-  for (const vk::PresentModeKHR mode : modes) {
-    switch (mode) {
-    case vk::PresentModeKHR::eImmediate:
-      immediate = true;
-      break;
-
-    case vk::PresentModeKHR::eMailbox:
-      mailbox = true;
-      break;
-    }
-  }
-
-  if (!vsync) {
-    return immediate ? vk::PresentModeKHR::eImmediate : vk::PresentModeKHR::eFifo;
-  }
-
-  if (triple_buffer) {
-    return mailbox ? vk::PresentModeKHR::eMailbox : vk::PresentModeKHR::eFifo;
-  }
-
-  return vk::PresentModeKHR::eFifo;
-}
-
-vk::raii::SwapchainKHR tge::Core::create_swapchain() {
-  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surfaces[0]).currentExtent;
-
-  // trick to supress useless vulkan warnings
-  auto tmp = ctx.physical_device().getSurfaceFormatsKHR(surfaces[0]);
-
-  return device->createSwapchainKHR(SwapchainInfo(ctx.physical_device(), surfaces[0], screen_size, swapchain_present_mode).get());
-}
-
-std::vector<tge::Image> tge::Core::create_swapchain_images() {
-  const std::vector<vk::Image> imgs = swapchain.getImages();
-  std::vector<tge::Image> res;
-  res.reserve(imgs.size());
-
-  for (const vk::Image& img : imgs) {
-    res.emplace_back(allocator, device, img, vk::Format::eB8G8R8A8Unorm);
-  }
-
-  return res;
-}
-
 void tge::Core::resize() {
-  swapchain_images.clear();
-
-  screen_size = ctx.physical_device().getSurfaceCapabilitiesKHR(surfaces[0]).currentExtent;
-  swapchain = device->createSwapchainKHR(
-      SwapchainInfo(ctx.physical_device(), surfaces[0], screen_size, swapchain_present_mode, swapchain).get()
-  );
-
-  swapchain_images = create_swapchain_images();
+  swapchain.resize();
 
   /// NEW_CODE
-  tmp_render_pass.resize(screen_size);
+  tmp_render_pass.resize(swapchain.screen_size());
 }
 
 const std::map<tge::Core::DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>>&
@@ -384,17 +315,7 @@ void tge::Core::frame_start() {
   }
   device->resetFences(*fences[frame_index]);
 
-  auto [res, new_image_index] = device->acquireNextImage2KHR(
-      {.swapchain = swapchain,
-       .timeout = UINT64_MAX,
-       .semaphore = image_available_semaphores[frame_index],
-       .deviceMask = device_present_mask}
-  );
-
-  image_index = new_image_index;
-  if (res != vk::Result::eSuccess) {
-    throw CoreException("Acquire next image error", static_cast<int32_t>(res));
-  }
+  swapchain.acquire_next_image(image_available_semaphores[frame_index]);
 
   get_render_cmd_buf().reset();
   get_render_cmd_buf().begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
@@ -402,10 +323,10 @@ void tge::Core::frame_start() {
   tmp_render_pass.begin(get_render_cmd_buf(), frame_index);
   tmp_render_pass.end(get_render_cmd_buf(), frame_index);
 
-  swapchain_images[image_index].switch_layout(get_render_cmd_buf(), vk::ImageLayout::eColorAttachmentOptimal);
+  swapchain.swapchain_image().switch_layout(get_render_cmd_buf(), vk::ImageLayout::eColorAttachmentOptimal);
 
   vk::RenderingAttachmentInfo color_attachment{
-      .imageView = swapchain_images[image_index].get_image_view(),
+      .imageView = swapchain.swapchain_image().get_image_view(),
       .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
       .resolveMode = vk::ResolveModeFlagBits::eNone,
       .resolveImageLayout = vk::ImageLayout::eUndefined,
@@ -415,7 +336,7 @@ void tge::Core::frame_start() {
   };
 
   vk::RenderingInfo render_info{
-      .renderArea = {.offset = {0, 0}, .extent = screen_size},
+      .renderArea = {.offset = {0, 0}, .extent = swapchain.screen_size()},
       .layerCount = 1,
       .colorAttachmentCount = 1,
       .pColorAttachments = &color_attachment
@@ -425,9 +346,16 @@ void tge::Core::frame_start() {
 
   get_render_cmd_buf().setViewport(
       0,
-      vk::Viewport(0.f, 0.f, static_cast<float>(screen_size.width), static_cast<float>(screen_size.height), 0.f, 1.f)
+      vk::Viewport(
+          0.f,
+          0.f,
+          static_cast<float>(swapchain.screen_size().width),
+          static_cast<float>(swapchain.screen_size().height),
+          0.f,
+          1.f
+      )
   );
-  get_render_cmd_buf().setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), screen_size));
+  get_render_cmd_buf().setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapchain.screen_size()));
 
   get_render_cmd_buf().bindPipeline(vk::PipelineBindPoint::eGraphics, tmp_pipeline);
 
@@ -447,7 +375,7 @@ void tge::Core::frame_start() {
       static_cast<const vk::ArrayProxy<const float>&>(s)
   );
 
-  *static_cast<float*>(tmp_buffers[frame_index].get_mapped_data()) = screen_size.width / 1920.f;
+  *static_cast<float*>(tmp_buffers[frame_index].get_mapped_data()) = swapchain.screen_size().width / 1920.f;
 
   get_render_cmd_buf().draw(1, 1, 0, 0);
 }
@@ -455,7 +383,7 @@ void tge::Core::frame_start() {
 void tge::Core::frame_end() {
   get_render_cmd_buf().endRendering();
 
-  swapchain_images[image_index].switch_layout(get_render_cmd_buf(), vk::ImageLayout::ePresentSrcKHR);
+  swapchain.swapchain_image().switch_layout(get_render_cmd_buf(), vk::ImageLayout::ePresentSrcKHR);
 
   get_render_cmd_buf().end();
 
@@ -467,7 +395,7 @@ void tge::Core::frame_end() {
   vk::CommandBufferSubmitInfo cmd_buf_submit_info{.commandBuffer = get_render_cmd_buf()};
 
   vk::SemaphoreSubmitInfo signal_semaphore_info{
-      .semaphore = render_finished_semaphores[image_index],
+      .semaphore = swapchain.semaphore(),
       .stageMask = vk::PipelineStageFlagBits2::eAllCommands
   };
 
@@ -481,12 +409,15 @@ void tge::Core::frame_end() {
   };
   queue.submit2(submit_info, fences[frame_index]);
 
+  auto present_sem = swapchain.semaphore();
+  auto present_swp = swapchain.swapchain();
+  auto present_ind = swapchain.image_index();
   vk::PresentInfoKHR present_info{
       .waitSemaphoreCount = 1,
-      .pWaitSemaphores = &*render_finished_semaphores[image_index],
+      .pWaitSemaphores = &present_sem,
       .swapchainCount = 1,
-      .pSwapchains = &*swapchain,
-      .pImageIndices = &image_index
+      .pSwapchains = &present_swp,
+      .pImageIndices = &present_ind
   };
 
   if (vk::Result res = queue.presentKHR(present_info); res != vk::Result::eSuccess) {

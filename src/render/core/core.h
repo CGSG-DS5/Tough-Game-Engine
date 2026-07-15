@@ -11,21 +11,20 @@
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
 #include "surface.h"
+#include "swapchain.h"
 #include "vma_wrapper/vma_allocator.h"
 #include "vulkan_context.h"
 
 namespace tge {
   class Core {
   public:
-    static constexpr uint32_t frames_in_flight = 2;
-
     enum struct DescriptorSetLayoutType : uint32_t {
       RENDER = 0,
       MATERIAL = 1,
       FINAL = 2,
     };
 
-    Core(std::span<SDL_Window*> windows, bool vsync, bool triple_buffer);
+    Core(SDL_Window* window, bool vsync, bool triple_buffer);
     ~Core();
 
     void resize();
@@ -39,21 +38,18 @@ namespace tge {
 
   private:
     VulkanContext ctx;
-    std::vector<Surface> surfaces;
+    Surface surface;
     Device device;
     MemoryAllocator allocator;
+    Swapchain swapchain;
 
-    vk::Extent2D screen_size;
-    const vk::PresentModeKHR swapchain_present_mode;
-    vk::raii::SwapchainKHR swapchain;
-    std::vector<Image> swapchain_images;
+    uint32_t frames_in_flight;
 
     const std::vector<vk::raii::DescriptorSetLayout> descriptor_set_layouts_raii;
     const std::vector<vk::DescriptorSetLayout> descriptor_set_layouts;
     const vk::PushConstantRange push_constant_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
     const vk::raii::PipelineLayout graphics_layout;
 
-    const uint32_t device_present_mask;
     const uint32_t queue_family_index;
     const vk::raii::Queue queue;
 
@@ -65,7 +61,6 @@ namespace tge {
 
     const std::vector<vk::raii::Fence> fences;
     const std::vector<vk::raii::Semaphore> image_available_semaphores;
-    const std::vector<vk::raii::Semaphore> render_finished_semaphores;
     const std::vector<vk::raii::CommandBuffer> render_command_buffers;
 
     const vk::raii::CommandBuffer update_command_buffer;
@@ -73,7 +68,6 @@ namespace tge {
     std::vector<std::pair<Image&, vk::BufferImageCopy>> update_command_buffer_data{};
 
     uint32_t frame_index{};
-    uint32_t image_index{};
 
     //////// NEW CODE
 
@@ -89,14 +83,8 @@ namespace tge {
 
     //////// NEW CODE
 
-    std::vector<Surface> create_surfaces(std::span<SDL_Window*> windows) const;
-
     uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();
-
-    vk::PresentModeKHR get_swapchain_present_mode(bool vsync, bool triple_buffer);
-    vk::raii::SwapchainKHR create_swapchain();
-    std::vector<Image> create_swapchain_images();
 
     static const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>>& get_layout_bindings();
     std::vector<vk::raii::DescriptorSetLayout> create_descriptor_set_layout() const;
