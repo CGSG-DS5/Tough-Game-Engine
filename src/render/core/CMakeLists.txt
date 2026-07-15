@@ -6,6 +6,7 @@ target_sources(${PROJECT_NAME}
         "vulkan_context.cpp"
         "device.cpp"
         "swapchain.cpp"
+        "descriptor_manager.cpp"
     PUBLIC FILE_SET HEADERS FILES
         "core.h"
         "core_exception.h"
@@ -13,7 +14,8 @@ target_sources(${PROJECT_NAME}
         "render_pass.h"
         "vulkan_context.h"
         "device.h"
-        "swapchain.h")
+        "swapchain.h"
+        "descriptor_manager.h")
 
 add_subdirectory(create_infos)
 add_subdirectory(vma_wrapper)

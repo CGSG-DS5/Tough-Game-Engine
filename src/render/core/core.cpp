@@ -35,19 +35,15 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     , frames_in_flight(swapchain.num_of_images() - 1)
     , queue_family_index(get_queue_family_index())
     , queue(create_queue())
-    , descriptor_set_layouts_raii(create_descriptor_set_layout())
-    , descriptor_set_layouts(get_handle_from_raii(descriptor_set_layouts_raii))
+    , descriptor_manager(device, frames_in_flight)
     , graphics_layout(
           device,
-          {.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size()),
-           .pSetLayouts = descriptor_set_layouts.data(),
+          {.setLayoutCount = static_cast<uint32_t>(descriptor_manager.layouts().size()),
+           .pSetLayouts = descriptor_manager.layouts().data(),
            .pushConstantRangeCount = 1,
            .pPushConstantRanges = &push_constant_range}
       )
     , command_pool(create_command_pool())
-    , descriptor_pool(create_descriptor_pool())
-    , descriptor_sets_raii(create_all_descriptor_sets())
-    , descriptor_sets(get_handle_from_raii(descriptor_sets_raii))
     , fences(create_fences())
     , image_available_semaphores(create_semaphores(frames_in_flight))
     , render_command_buffers(create_command_buffers(frames_in_flight))
@@ -83,7 +79,7 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
   for (size_t i = 0; i < frames_in_flight; i++) {
     vk::DescriptorBufferInfo buffer_info{.buffer = tmp_buffers[i].get_buffer(), .offset = 0, .range = 4};
     vk::WriteDescriptorSet descriptor_write{
-        .dstSet = descriptor_sets.at(DescriptorSetLayoutType::RENDER)[i],
+        .dstSet = descriptor_manager.descriptor_sets(DescriptorLayoutType::RENDER)[i],
         .dstBinding = 0,
         .dstArrayElement = 0,
         .descriptorCount = 1,
@@ -94,22 +90,17 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     device->updateDescriptorSets(descriptor_write, {});
   }
 
-  for (size_t i = 0; i < frames_in_flight; i++) {
-    vk::DescriptorImageInfo image_info{
-        .imageView = tmp_img.get_image_view(),
-        .imageLayout = tmp_img.get_image_layout()
-    };
-    vk::WriteDescriptorSet descriptor_write{
-        .dstSet = descriptor_sets.at(DescriptorSetLayoutType::MATERIAL)[i],
-        .dstBinding = 0,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = vk::DescriptorType::eSampledImage,
-        .pImageInfo = &image_info
-    };
+  vk::DescriptorImageInfo image_info{.imageView = tmp_img.get_image_view(), .imageLayout = tmp_img.get_image_layout()};
+  vk::WriteDescriptorSet descriptor_write{
+      .dstSet = descriptor_manager.descriptor_sets(DescriptorLayoutType::MATERIAL)[0],
+      .dstBinding = 0,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = vk::DescriptorType::eSampledImage,
+      .pImageInfo = &image_info
+  };
 
-    // device.updateDescriptorSets(descriptor_write, {});
-  }
+  // device.updateDescriptorSets(descriptor_write, {});
 
   std::vector<float> tmp_data{1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1};
 
@@ -139,95 +130,9 @@ void tge::Core::resize() {
   tmp_render_pass.resize(swapchain.screen_size());
 }
 
-const std::map<tge::Core::DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>>&
-tge::Core::get_layout_bindings() {
-  static const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>> bindings{
-      {DescriptorSetLayoutType::RENDER,
-       {{.binding = 0,
-         .descriptorType = vk::DescriptorType::eUniformBuffer,
-         .descriptorCount = 1,
-         .stageFlags = vk::ShaderStageFlagBits::eAll},
-        {.binding = 1,
-         .descriptorType = vk::DescriptorType::eStorageBuffer,
-         .descriptorCount = 3,
-         .stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex}}},
-      {DescriptorSetLayoutType::MATERIAL,
-       {{.binding = 0,
-         .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-         .descriptorCount = 1,
-         .stageFlags = vk::ShaderStageFlagBits::eFragment}}},
-      {DescriptorSetLayoutType::FINAL,
-       {{.binding = 0,
-         .descriptorType = vk::DescriptorType::eCombinedImageSampler,
-         .descriptorCount = 1,
-         .stageFlags = vk::ShaderStageFlagBits::eFragment}}}
-  };
-
-  return bindings;
-}
-
-std::vector<vk::raii::DescriptorSetLayout> tge::Core::create_descriptor_set_layout() const {
-  const auto& layout_bindings = get_layout_bindings();
-
-  std::vector<vk::raii::DescriptorSetLayout> res;
-  for (const auto& [type, bindings] : layout_bindings) {
-    vk::DescriptorSetLayoutCreateInfo info{
-        .bindingCount = static_cast<uint32_t>(bindings.size()),
-        .pBindings = bindings.data()
-    };
-
-    res.emplace_back(device, info);
-  }
-
-  return res;
-}
-
 vk::raii::CommandPool tge::Core::create_command_pool() {
   return device->createCommandPool(
       {.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer, .queueFamilyIndex = queue_family_index}
-  );
-}
-
-vk::raii::DescriptorPool tge::Core::create_descriptor_pool() {
-  const auto& layout_bindings = get_layout_bindings();
-
-  uint32_t max_sets = 0;
-  std::vector<vk::DescriptorPoolSize> sizes;
-
-  for (const auto& [type, bindings] : layout_bindings) {
-    uint32_t num_sets = frames_in_flight;
-    max_sets += num_sets;
-    for (const auto& binding : bindings) {
-      sizes.push_back({.type = binding.descriptorType, .descriptorCount = binding.descriptorCount * num_sets});
-    }
-  }
-
-  return device->createDescriptorPool(
-      {.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-       .maxSets = max_sets,
-       .poolSizeCount = static_cast<uint32_t>(sizes.size()),
-       .pPoolSizes = sizes.data()}
-  );
-}
-
-std::map<tge::Core::DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>>
-tge::Core::create_all_descriptor_sets() {
-  std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> res;
-  for (uint32_t i = 0; i < descriptor_set_layouts.size(); i++) {
-    auto type = static_cast<DescriptorSetLayoutType>(i);
-    res.insert({type, create_descriptor_sets(type)});
-  }
-
-  return res;
-}
-
-std::vector<vk::raii::DescriptorSet> tge::Core::create_descriptor_sets(DescriptorSetLayoutType type) {
-  std::vector<vk::DescriptorSetLayout> layouts(frames_in_flight, descriptor_set_layouts[static_cast<uint32_t>(type)]);
-
-  return device->allocateDescriptorSets(
-      {.descriptorPool = descriptor_pool,
-       .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
-       .pSetLayouts = layouts.data()}
   );
 }
 
@@ -363,7 +268,7 @@ void tge::Core::frame_start() {
       vk::PipelineBindPoint::eGraphics,
       graphics_layout,
       0,
-      descriptor_sets.at(DescriptorSetLayoutType::RENDER)[frame_index],
+      descriptor_manager.descriptor_sets(DescriptorLayoutType::RENDER)[frame_index],
       nullptr
   );
 

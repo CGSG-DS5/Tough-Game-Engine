@@ -8,6 +8,7 @@
 
 #include "create_infos/infos.h"
 #include "device.h"
+#include "descriptor_manager.h"
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
 #include "surface.h"
@@ -18,12 +19,6 @@
 namespace tge {
   class Core {
   public:
-    enum struct DescriptorSetLayoutType : uint32_t {
-      RENDER = 0,
-      MATERIAL = 1,
-      FINAL = 2,
-    };
-
     Core(SDL_Window* window, bool vsync, bool triple_buffer);
     ~Core();
 
@@ -42,11 +37,10 @@ namespace tge {
     Device device;
     MemoryAllocator allocator;
     Swapchain swapchain;
-
     uint32_t frames_in_flight;
 
-    const std::vector<vk::raii::DescriptorSetLayout> descriptor_set_layouts_raii;
-    const std::vector<vk::DescriptorSetLayout> descriptor_set_layouts;
+    DescriptorManager descriptor_manager;
+
     const vk::PushConstantRange push_constant_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
     const vk::raii::PipelineLayout graphics_layout;
 
@@ -54,10 +48,6 @@ namespace tge {
     const vk::raii::Queue queue;
 
     const vk::raii::CommandPool command_pool;
-    const vk::raii::DescriptorPool descriptor_pool;
-
-    const std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> descriptor_sets_raii;
-    const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSet>> descriptor_sets;
 
     const std::vector<vk::raii::Fence> fences;
     const std::vector<vk::raii::Semaphore> image_available_semaphores;
@@ -86,14 +76,7 @@ namespace tge {
     uint32_t get_queue_family_index();
     vk::raii::Queue create_queue();
 
-    static const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>>& get_layout_bindings();
-    std::vector<vk::raii::DescriptorSetLayout> create_descriptor_set_layout() const;
-
     vk::raii::CommandPool create_command_pool();
-    vk::raii::DescriptorPool create_descriptor_pool();
-
-    std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> create_all_descriptor_sets();
-    std::vector<vk::raii::DescriptorSet> create_descriptor_sets(DescriptorSetLayoutType type);
 
     std::vector<vk::raii::Fence> create_fences();
     std::vector<vk::raii::Semaphore> create_semaphores(uint32_t num);
