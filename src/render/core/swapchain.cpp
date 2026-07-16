@@ -7,7 +7,7 @@
 
 tge::Swapchain::Swapchain(
     vk::PhysicalDevice physical_device,
-    const vk::raii::Device& device,
+    const Device& device,
     vk::SurfaceKHR surface,
     const MemoryAllocator& allocator,
     bool vsync,
@@ -20,8 +20,7 @@ tge::Swapchain::Swapchain(
     , swapchain_present_mode(get_swapchain_present_mode(vsync, triple_buffer))
     , m_swapchain(create_swapchain())
     , m_swapchain_images(create_swapchain_images())
-    , render_finished_semaphores(create_semaphores(static_cast<uint32_t>(m_swapchain_images.size())))
-    , device_present_mask(device.getGroupPresentCapabilitiesKHR().presentMask[0]) {}
+    , device_present_mask(device->getGroupPresentCapabilitiesKHR().presentMask[0]) {}
 
 vk::Extent2D tge::Swapchain::screen_size() const {
   return m_screen_size;
@@ -41,10 +40,6 @@ const tge::Image& tge::Swapchain::swapchain_image() const {
 
 uint32_t tge::Swapchain::num_of_images() const {
   return static_cast<uint32_t>(m_swapchain_images.size());
-}
-
-vk::Semaphore tge::Swapchain::semaphore() const {
-  return render_finished_semaphores[m_image_index];
 }
 
 uint32_t tge::Swapchain::image_index() const {
@@ -131,13 +126,3 @@ std::vector<tge::Image> tge::Swapchain::create_swapchain_images() const {
   return res;
 }
 
-std::vector<vk::raii::Semaphore> tge::Swapchain::create_semaphores(uint32_t num) const {
-  std::vector<vk::raii::Semaphore> result;
-  result.reserve(num);
-
-  for (int32_t i = 0; i < num; i++) {
-    result.emplace_back(device.createSemaphore({}));
-  }
-
-  return result;
-}

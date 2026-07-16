@@ -17,6 +17,9 @@ namespace tge {
     const vk::raii::Device& operator*() const;
     const vk::raii::Device* operator->() const;
 
+    std::vector<vk::raii::Fence> create_fences(uint32_t num) const;
+    std::vector<vk::raii::Semaphore> create_semaphores(uint32_t num) const;
+
   private:
     vk::raii::Device device;
 

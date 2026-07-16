@@ -6,9 +6,10 @@
 #ifndef __tge_core_h_
 #define __tge_core_h_
 
+#include "command_manager.h"
 #include "create_infos/infos.h"
-#include "device.h"
 #include "descriptor_manager.h"
+#include "device.h"
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
 #include "surface.h"
@@ -27,8 +28,6 @@ namespace tge {
     void frame_start();
     void frame_end();
 
-    const vk::raii::CommandBuffer& get_render_cmd_buf() const;
-
     void update_image(std::span<const char> data, Image& img);
 
   private:
@@ -40,24 +39,17 @@ namespace tge {
     uint32_t frames_in_flight;
 
     DescriptorManager descriptor_manager;
+    CommandManager command_manager;
 
     const vk::PushConstantRange push_constant_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
     const vk::raii::PipelineLayout graphics_layout;
 
-    const uint32_t queue_family_index;
-    const vk::raii::Queue queue;
-
-    const vk::raii::CommandPool command_pool;
-
-    const std::vector<vk::raii::Fence> fences;
-    const std::vector<vk::raii::Semaphore> image_available_semaphores;
-    const std::vector<vk::raii::CommandBuffer> render_command_buffers;
-
-    const vk::raii::CommandBuffer update_command_buffer;
+    // const vk::raii::CommandBuffer update_command_buffer;
     std::vector<char> update_data{};
     std::vector<std::pair<Image&, vk::BufferImageCopy>> update_command_buffer_data{};
 
-    uint32_t frame_index{};
+    std::vector<vk::raii::Semaphore> render_finished_semaphores;
+    std::vector<vk::raii::Semaphore> image_available_semaphores;
 
     //////// NEW CODE
 
@@ -73,16 +65,8 @@ namespace tge {
 
     //////// NEW CODE
 
-    uint32_t get_queue_family_index();
-    vk::raii::Queue create_queue();
-
-    vk::raii::CommandPool create_command_pool();
-
-    std::vector<vk::raii::Fence> create_fences();
-    std::vector<vk::raii::Semaphore> create_semaphores(uint32_t num);
-    std::vector<vk::raii::CommandBuffer> create_command_buffers(uint32_t num);
-
     void submit_update_buffer();
+    uint32_t frame_index() const;
   };
 } // namespace tge
 

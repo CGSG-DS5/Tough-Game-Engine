@@ -43,3 +43,25 @@ vk::raii::Device tge::Device::create_device(vk::raii::PhysicalDevice physical_de
 
   return vk::raii::Device(physical_device, device_create_info.get<vk::DeviceCreateInfo>());
 }
+
+std::vector<vk::raii::Fence> tge::Device::create_fences(uint32_t num) const {
+  std::vector<vk::raii::Fence> result;
+  result.reserve(num);
+
+  for (int32_t i = 0; i < num; i++) {
+    result.emplace_back(device.createFence({.flags = vk::FenceCreateFlagBits::eSignaled}));
+  }
+
+  return result;
+}
+
+std::vector<vk::raii::Semaphore> tge::Device::create_semaphores(uint32_t num) const {
+  std::vector<vk::raii::Semaphore> result;
+  result.reserve(num);
+
+  for (int32_t i = 0; i < num; i++) {
+    result.emplace_back(device.createSemaphore(vk::SemaphoreCreateInfo()));
+  }
+
+  return result;
+}
