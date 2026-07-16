@@ -10,6 +10,7 @@
 #include "create_infos/infos.h"
 #include "descriptor_manager.h"
 #include "device.h"
+#include "pipeline_manager.h"
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
 #include "surface.h"
@@ -40,9 +41,7 @@ namespace tge {
 
     DescriptorManager descriptor_manager;
     CommandManager command_manager;
-
-    const vk::PushConstantRange push_constant_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
-    const vk::raii::PipelineLayout graphics_layout;
+    PipelineManager pipeline_manager;
 
     // const vk::raii::CommandBuffer update_command_buffer;
     std::vector<char> update_data{};

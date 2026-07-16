@@ -10,9 +10,9 @@
 #include "../render_pass.h"
 
 namespace tge {
-  namespace topology {
+  namespace vertex_type {
     struct NoVertices {};
-  } // namespace topology
+  } // namespace vertex_type
 
   class GraphicsPipeline {
   public:
@@ -143,7 +143,7 @@ namespace tge {
   };
 
   template<>
-  inline vk::PipelineVertexInputStateCreateInfo GraphicsPipeline::create_vertex_input<topology::NoVertices>() const {
+  inline vk::PipelineVertexInputStateCreateInfo GraphicsPipeline::create_vertex_input<vertex_type::NoVertices>() const {
     return {};
   }
 } // namespace tge

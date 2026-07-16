@@ -37,19 +37,12 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     , descriptor_manager(device, frames_in_flight)
     , render_finished_semaphores(device.create_semaphores(swapchain.num_of_images()))
     , image_available_semaphores(device.create_semaphores(frames_in_flight))
-    , graphics_layout(
-          device,
-          {.setLayoutCount = static_cast<uint32_t>(descriptor_manager.layouts().size()),
-           .pSetLayouts = descriptor_manager.layouts().data(),
-           .pushConstantRangeCount = 1,
-           .pPushConstantRanges = &push_constant_range}
-      )
+    , pipeline_manager(device, descriptor_manager.layouts())
     //, update_command_buffer(std::move(create_command_buffers(1)[0]))
     , /// :TODO: Delete
-    tmp_pipeline(GraphicsPipeline(
-        graphics_layout,
+    tmp_pipeline(pipeline_manager.create_graphics_pipeline(
         device,
-        topology::NoVertices{},
+        vertex_type::NoVertices{},
         "test_shader",
         vk::PrimitiveTopology::ePointList,
         attachments_info,
@@ -217,7 +210,7 @@ void tge::Core::frame_start() {
 
   command_manager->bindDescriptorSets(
       vk::PipelineBindPoint::eGraphics,
-      graphics_layout,
+      pipeline_manager.graphics_layout(),
       0,
       descriptor_manager.descriptor_sets(DescriptorLayoutType::RENDER)[frame_index()],
       nullptr
@@ -225,7 +218,7 @@ void tge::Core::frame_start() {
 
   std::vector<float> s{clock() / static_cast<float>(CLOCKS_PER_SEC)};
   command_manager->pushConstants(
-      graphics_layout,
+      pipeline_manager.graphics_layout(),
       vk::ShaderStageFlagBits::eAllGraphics,
       0,
       static_cast<const vk::ArrayProxy<const float>&>(s)

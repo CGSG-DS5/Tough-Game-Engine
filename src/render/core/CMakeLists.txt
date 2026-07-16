@@ -8,7 +8,7 @@ target_sources(${PROJECT_NAME}
         "swapchain.cpp"
         "descriptor_manager.cpp"
         "command_manager.cpp"
-        
+        "pipeline_manager.cpp"
     PUBLIC FILE_SET HEADERS FILES
         "core.h"
         "core_exception.h"
@@ -19,6 +19,7 @@ target_sources(${PROJECT_NAME}
         "swapchain.h"
         "descriptor_manager.h"
         "command_manager.h"
+        "pipeline_manager.h"
         )
 
 add_subdirectory(create_infos)

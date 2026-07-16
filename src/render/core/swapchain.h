@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef __tge_swapchain_h
-#define __tge_swapchain_h
+#ifndef __tge_swapchain_h_
+#define __tge_swapchain_h_
 
 #include "vma_wrapper/image.h"
 
@@ -53,4 +53,4 @@ namespace tge {
   };
 } // namespace tge
 
-#endif // __tge_swapchain_h
+#endif // __tge_swapchain_h_

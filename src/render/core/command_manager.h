@@ -56,4 +56,4 @@ namespace tge {
   };
 } // namespace tge
 
-#endif __tge_command_manager_h_
+#endif // __tge_command_manager_h_
