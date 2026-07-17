@@ -5,27 +5,6 @@
 
 #include "tge.h"
 
-template<typename T>
-auto get_handle_from_raii(const std::vector<T>& data) {
-  using HandleType = typename T::CppType;
-  std::vector<HandleType> result;
-  result.reserve(data.size());
-  for (const auto& item : data) {
-    result.push_back(*item);
-  }
-  return result;
-}
-
-template<typename S, typename T>
-auto get_handle_from_raii(const std::map<S, std::vector<T>>& data) {
-  using HandleType = typename T::CppType;
-  std::map<S, std::vector<HandleType>> result;
-  for (const auto& [k, v] : data) {
-    result[k] = get_handle_from_raii(v);
-  }
-  return result;
-}
-
 tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     : ctx()
     , surface(ctx.instance(), window)
@@ -38,6 +17,7 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     , render_finished_semaphores(device.create_semaphores(swapchain.num_of_images()))
     , image_available_semaphores(device.create_semaphores(frames_in_flight))
     , pipeline_manager(device, descriptor_manager.layouts())
+    , image_manager(allocator, device, ctx.physical_device())
     //, update_command_buffer(std::move(create_command_buffers(1)[0]))
     , /// :TODO: Delete
     tmp_pipeline(pipeline_manager.create_graphics_pipeline(
@@ -51,16 +31,14 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     , tmp_buffers()
     , render_pass_factory(allocator, device)
     , tmp_render_pass(render_pass_factory.create_gbuffer_pass(swapchain.screen_size(), 2, frames_in_flight))
-    , tmp_img(
-          allocator,
-          device,
+    , tmp_img(image_manager.create_image(
           vk::Format::eR32G32B32A32Sfloat,
-          {2, 2, 1},
+          vk::Extent3D{2, 2, 1},
           1,
           vk::SampleCountFlagBits::e1,
           vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
           false
-      ) {
+      )) {
   tmp_buffers.reserve(frames_in_flight);
   for (uint32_t i = 0; i < frames_in_flight; i++) {
     tmp_buffers.emplace_back(allocator, 4, false, vk::BufferUsageFlagBits::eUniformBuffer);
@@ -80,21 +58,54 @@ tge::Core::Core(SDL_Window* window, bool vsync, bool triple_buffer)
     device->updateDescriptorSets(descriptor_write, {});
   }
 
-  vk::DescriptorImageInfo image_info{.imageView = tmp_img.get_image_view(), .imageLayout = tmp_img.get_image_layout()};
+  std::vector<float> tmp_data{1, 1, 1, 1, .5f, .5f, .5f, 1, .5f, .5f, .5f, 1, 1, 1, 1, 1};
+
+  Buffer staging_buffer(
+      allocator,
+      static_cast<uint32_t>(tmp_data.size() * sizeof(float)),
+      false,
+      vk::BufferUsageFlagBits::eTransferSrc
+  );
+  std::memcpy(staging_buffer.get_mapped_data(), tmp_data.data(), tmp_data.size() * sizeof(float));
+
+  auto cmd_buf = command_manager.begin_single_commands();
+
+  vk::BufferImageCopy region{
+      .bufferOffset = 0,
+      .bufferRowLength = 0,
+      .bufferImageHeight = 0,
+      .imageSubresource =
+          {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1},
+      .imageOffset = {0, 0, 0},
+      .imageExtent = tmp_img.get_image_sizes()
+  };
+
+  tmp_img.switch_layout(cmd_buf, vk::ImageLayout::eTransferDstOptimal);
+  cmd_buf.copyBufferToImage(
+      staging_buffer.get_buffer(),
+      tmp_img.get_image(),
+      vk::ImageLayout::eTransferDstOptimal,
+      region
+  );
+  tmp_img.switch_layout(cmd_buf, vk::ImageLayout::eShaderReadOnlyOptimal);
+
+  command_manager.end_single_commands(std::move(cmd_buf));
+
+  vk::DescriptorImageInfo image_info{
+      .sampler = image_manager.sampler(ImageSamplerType::REPEAT),
+      .imageView = tmp_img.get_image_view(),
+      .imageLayout = tmp_img.get_image_layout()
+  };
   vk::WriteDescriptorSet descriptor_write{
       .dstSet = descriptor_manager.descriptor_sets(DescriptorLayoutType::MATERIAL)[0],
       .dstBinding = 0,
       .dstArrayElement = 0,
       .descriptorCount = 1,
-      .descriptorType = vk::DescriptorType::eSampledImage,
+      .descriptorType = vk::DescriptorType::eCombinedImageSampler,
       .pImageInfo = &image_info
   };
 
-  // device.updateDescriptorSets(descriptor_write, {});
-
-  std::vector<float> tmp_data{1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1};
-
-  update_image({reinterpret_cast<const char*>(tmp_data.data()), tmp_data.size() * sizeof(float)}, tmp_img);
+  device->updateDescriptorSets(descriptor_write, {});
 }
 
 tge::Core::~Core() {
@@ -108,52 +119,6 @@ void tge::Core::resize() {
   tmp_render_pass.resize(swapchain.screen_size());
 }
 
-void tge::Core::update_image(std::span<const char> data, Image& img) {
-  update_command_buffer_data.push_back(
-      {img,
-       {.bufferOffset = static_cast<uint32_t>(update_data.size()),
-        .bufferRowLength = 0,
-        .bufferImageHeight = 0,
-        .imageSubresource =
-            {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1},
-        .imageOffset = {0, 0, 0},
-        .imageExtent = img.get_image_sizes()}}
-  );
-
-  update_data.insert(update_data.end(), data.begin(), data.end());
-}
-
-void tge::Core::submit_update_buffer() {
-  if (update_data.empty()) {
-    return;
-  }
-
-  Buffer staging_buffer(
-      allocator,
-      static_cast<uint32_t>(update_data.size()),
-      false,
-      vk::BufferUsageFlagBits::eTransferSrc
-  );
-  std::memcpy(staging_buffer.get_mapped_data(), update_data.data(), update_data.size());
-
-  /*
-  update_command_buffer.begin({.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
-  for (auto& [img, region] : update_command_buffer_data) {
-    img.switch_layout(update_command_buffer, vk::ImageLayout::eTransferDstOptimal);
-    update_command_buffer
-        .copyBufferToImage(staging_buffer.get_buffer(), img.get_image(), vk::ImageLayout::eTransferDstOptimal, region);
-    img.switch_layout(update_command_buffer, vk::ImageLayout::eShaderReadOnlyOptimal);
-  }
-  update_command_buffer.end();
-
-  vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*update_command_buffer};
-  queue.submit(submitInfo, nullptr);
-  queue.waitIdle();
-
-  update_data.clear();
-  */
-}
-
 uint32_t tge::Core::frame_index() const {
   return command_manager.frame_index();
 }
@@ -161,8 +126,6 @@ uint32_t tge::Core::frame_index() const {
 #include <ctime>
 
 void tge::Core::frame_start() {
-  submit_update_buffer();
-
   command_manager.wait_finishing();
   swapchain.acquire_next_image(image_available_semaphores[frame_index()]);
 
@@ -213,6 +176,14 @@ void tge::Core::frame_start() {
       pipeline_manager.graphics_layout(),
       0,
       descriptor_manager.descriptor_sets(DescriptorLayoutType::RENDER)[frame_index()],
+      nullptr
+  );
+
+  command_manager->bindDescriptorSets(
+      vk::PipelineBindPoint::eGraphics,
+      pipeline_manager.graphics_layout(),
+      1,
+      descriptor_manager.descriptor_sets(DescriptorLayoutType::MATERIAL)[0],
       nullptr
   );
 

@@ -42,10 +42,10 @@ vk::raii::ImageView tge::Image::create_image_view(
 }
 
 static VkImageType get_image_type(vk::Extent3D extent) {
-  if (extent.height == 0) {
+  if (extent.height == 1) {
     return VK_IMAGE_TYPE_1D;
   }
-  if (extent.depth == 0) {
+  if (extent.depth == 1) {
     return VK_IMAGE_TYPE_2D;
   }
   return VK_IMAGE_TYPE_3D;
@@ -55,10 +55,10 @@ static vk::ImageViewType get_image_view_type(bool is_cube, vk::Extent3D extent) 
   if (is_cube) {
     return vk::ImageViewType::eCubeArray;
   }
-  if (extent.height == 0) {
+  if (extent.height == 1) {
     return vk::ImageViewType::e1D;
   }
-  if (extent.depth == 0) {
+  if (extent.depth == 1) {
     return vk::ImageViewType::e2D;
   }
   return vk::ImageViewType::e3D;

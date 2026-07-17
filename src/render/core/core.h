@@ -10,6 +10,7 @@
 #include "create_infos/infos.h"
 #include "descriptor_manager.h"
 #include "device.h"
+#include "image_manager.h"
 #include "pipeline_manager.h"
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
@@ -29,8 +30,6 @@ namespace tge {
     void frame_start();
     void frame_end();
 
-    void update_image(std::span<const char> data, Image& img);
-
   private:
     VulkanContext ctx;
     Surface surface;
@@ -42,10 +41,7 @@ namespace tge {
     DescriptorManager descriptor_manager;
     CommandManager command_manager;
     PipelineManager pipeline_manager;
-
-    // const vk::raii::CommandBuffer update_command_buffer;
-    std::vector<char> update_data{};
-    std::vector<std::pair<Image&, vk::BufferImageCopy>> update_command_buffer_data{};
+    ImageManager image_manager;
 
     std::vector<vk::raii::Semaphore> render_finished_semaphores;
     std::vector<vk::raii::Semaphore> image_available_semaphores;
@@ -64,7 +60,6 @@ namespace tge {
 
     //////// NEW CODE
 
-    void submit_update_buffer();
     uint32_t frame_index() const;
   };
 } // namespace tge

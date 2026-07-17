@@ -107,3 +107,20 @@ void tge::CommandManager::present(vk::Semaphore render_finished_semaphore, const
     throw CoreException("Error in present", static_cast<int32_t>(res));
   }
 }
+
+vk::raii::CommandBuffer tge::CommandManager::begin_single_commands() const {
+  vk::raii::CommandBuffer commandBuffer = std::move(create_command_buffers(1)[0]);
+
+  vk::CommandBufferBeginInfo beginInfo{.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+  commandBuffer.begin(beginInfo);
+
+  return commandBuffer;
+}
+
+void tge::CommandManager::end_single_commands(vk::raii::CommandBuffer&& cmd_buf) const {
+  cmd_buf.end();
+
+  vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*cmd_buf};
+  queue.submit(submitInfo, nullptr);
+  queue.waitIdle();
+}

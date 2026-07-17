@@ -37,38 +37,49 @@ struct GSInput {
 
 struct GSOutput {
     float4 position : SV_Position;
-    [[vk::location(0)]] float3 color : COLOR;
+    float3 color;
+    float2 tex_coord;
 };
 
 [shader("geometry")]
-[maxvertexcount(3)]
+[maxvertexcount(4)]
 void geomMain(
     point GSInput input[1],
     inout TriangleStream<GSOutput> outputStream
 ) {
-    GSOutput v0;
-    v0.position = float4(rotate(0, -0.5), 0, 1);
-    v0.color = float3(1, 0, 0) * ubo.color;
-    outputStream.Append(v0);
+    GSOutput v;
+    v.position = float4(rotate(-0.5, 0.5), 0, 1);
+    v.color = float3(1, 0, 0) * ubo.color;
+    v.tex_coord = float2(0, 0);
+    outputStream.Append(v);
 
-    GSOutput v1;
-    v1.position = float4(rotate(-0.5, 0.5), 0, 1);
-    v1.color = float3(0, 1, 0) * ubo.color;
-    outputStream.Append(v1);
+    v.position = float4(rotate(-0.5, -0.5), 0, 1);
+    v.color = float3(0, 1, 0) * ubo.color;
+    v.tex_coord = float2(0, 1);
+    outputStream.Append(v);
 
-    GSOutput v2;
-    v2.position = float4(rotate(0.5, 0.5), 0, 1);
-    v2.color = float3(0, 0, 1) * ubo.color;
-    outputStream.Append(v2);
+    v.position = float4(rotate(0.5, 0.5), 0, 1);
+    v.color = float3(0, 0, 1) * ubo.color;
+    v.tex_coord = float2(1, 0);
+    outputStream.Append(v);
+
+    v.position = float4(rotate(0.5, -0.5), 0, 1);
+    v.color = float3(0, 0, 1) * ubo.color;
+    v.tex_coord = float2(1, 1);
+    outputStream.Append(v);
 
     outputStream.RestartStrip();
 }
 
+layout(set = 1) Sampler2D texture;
+
 struct FSInput {
-    [[vk::location(0)]] float3 color : COLOR;
+    float3 color;
+    float2 tex_coord;
 };
 
 [shader("fragment")]
 float4 fragMain(FSInput input) : SV_Target0 {
-    return float4(input.color, 1);
+    // return float4(input.color, 1);
+    return texture.Sample(input.tex_coord) * float4(input.color, 1);
 }

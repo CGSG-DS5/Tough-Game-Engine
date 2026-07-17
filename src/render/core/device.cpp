@@ -24,7 +24,11 @@ vk::raii::Device tge::Device::create_device(vk::raii::PhysicalDevice physical_de
   auto queue_info = QueueInfo(physical_device, surface).get();
   auto device_exts = DeviceExtensions(physical_device).get();
 
-  vk::PhysicalDeviceFeatures device_features{.fullDrawIndexUint32 = true, .geometryShader = true};
+  vk::PhysicalDeviceFeatures device_features{
+      .fullDrawIndexUint32 = true,
+      .geometryShader = true,
+      .samplerAnisotropy = true
+  };
   vk::StructureChain<
       vk::DeviceCreateInfo,
       vk::PhysicalDeviceSynchronization2Features,

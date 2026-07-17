@@ -33,6 +33,9 @@ namespace tge {
     void submit(vk::Semaphore image_available_semaphore, vk::Semaphore render_finished_semaphore) const;
     void present(vk::Semaphore render_finished_semaphore, const Swapchain& swapchain) const;
 
+    vk::raii::CommandBuffer begin_single_commands() const;
+    void end_single_commands(vk::raii::CommandBuffer&& cmd_buf) const;
+
   private:
     const Device& device;
     uint32_t frames_in_flight;
