@@ -15,6 +15,7 @@ namespace tge {
     Render(bool vsync, bool triple_buffer);
 
   private:
+    SDL_Window* window;
     Core core;
 
     void on_resize(int32_t wigth, int32_t height) override;

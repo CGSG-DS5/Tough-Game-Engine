@@ -6,25 +6,22 @@
 #ifndef __tge_core_h_
 #define __tge_core_h_
 
+#include "command_manager.h"
 #include "create_infos/infos.h"
+#include "descriptor_manager.h"
+#include "device.h"
+#include "image_manager.h"
+#include "pipeline_manager.h"
 #include "pipelines/graphics_pipeline.h"
 #include "render_pass.h"
 #include "surface.h"
+#include "swapchain.h"
 #include "vma_wrapper/vma_allocator.h"
+#include "vulkan_context.h"
 
 namespace tge {
   class Core {
   public:
-    enum struct DescriptorSetLayoutType : uint32_t {
-      RENDER = 0,
-      MATERIAL = 1,
-      FINAL = 2,
-    };
-
-    enum struct SamplerType : uint32_t {
-      DEFAULT = 0,
-    };
-
     Core(SDL_Window* window, bool vsync, bool triple_buffer);
     ~Core();
 
@@ -33,94 +30,64 @@ namespace tge {
     void frame_start();
     void frame_end();
 
-    const vk::raii::CommandBuffer& get_render_cmd_buf() const;
+    template<typename T>
+    void create_shader(
+        RenderPassType type,
+        const std::string& name,
+        vk::PrimitiveTopology topology,
+        vk::CullModeFlags cull_mode = vk::CullModeFlagBits::eBack,
+        bool depth_test = true,
+        bool depth_write = true
+    ) {
+      graphics_pipelines.try_emplace(type);
+      switch (type) {
+      case RenderPassType::OPAQUE:
+        graphics_pipelines[type].push_back(pipeline_manager.create_graphics_pipeline(
+            T{},
+            name,
+            topology,
+            render_pass_manager.attachments_format(type),
+            cull_mode,
+            false,
+            depth_test,
+            depth_write,
+            false
+        ));
+        break;
+      }
+    }
 
-    void update_image(std::span<const char> data, Image& img);
+    void create_final_shader(const std::string& name);
 
   private:
-    const vk::raii::Context context{};
+    VulkanContext ctx;
+    Surface surface;
+    Device device;
+    MemoryAllocator allocator;
+    Swapchain swapchain;
+    uint32_t frames_in_flight;
 
-    const vk::raii::Instance instance;
-    const vk::raii::DebugUtilsMessengerEXT debug_messenger;
-    const vk::raii::PhysicalDevice physical_device;
-    const RaiiSurface surface;
-    const vk::raii::Device device;
-    const uint32_t device_present_mask;
-    const uint32_t queue_family_index;
-    const vk::raii::Queue queue;
-    const MemoryAllocator allocator;
+    DescriptorManager descriptor_manager;
+    CommandManager command_manager;
+    PipelineManager pipeline_manager;
+    ImageManager image_manager;
 
-    vk::Extent2D screen_size;
-    const vk::PresentModeKHR swapchain_present_mode;
-    const uint32_t frames_in_flight;
-    vk::raii::SwapchainKHR swapchain;
-    std::vector<Image> swapchain_images;
+    std::vector<vk::raii::Semaphore> render_finished_semaphores;
+    std::vector<vk::raii::Semaphore> image_available_semaphores;
 
-    const std::vector<vk::raii::DescriptorSetLayout> descriptor_set_layouts_raii;
-    const std::vector<vk::DescriptorSetLayout> descriptor_set_layouts;
-    const vk::PushConstantRange push_constant_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
-    const vk::raii::PipelineLayout graphics_layout;
+    RenderPassManager render_pass_manager;
 
-    const vk::raii::CommandPool command_pool;
-    const vk::raii::DescriptorPool descriptor_pool;
+    std::map<RenderPassType, std::vector<GraphicsPipeline>> graphics_pipelines;
+    ////// TMP CODE
 
-    const std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> descriptor_sets_raii;
-    const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSet>> descriptor_sets;
+    Buffer tmp_vert_buffer;
+    Buffer tmp_ind_buffer;
+    uint32_t num_of_triangles{32};
 
-    const std::vector<vk::raii::Fence> fences;
-    const std::vector<vk::raii::Semaphore> image_available_semaphores;
-    const std::vector<vk::raii::Semaphore> render_finished_semaphores;
-    const std::vector<vk::raii::CommandBuffer> render_command_buffers;
+    ////// TMP CODE
 
-    const vk::raii::CommandBuffer update_command_buffer;
-    std::vector<char> update_data{};
-    std::vector<std::pair<Image&, vk::BufferImageCopy>> update_command_buffer_data{};
-
-    std::map<SamplerType, vk::raii::Sampler> samplers;
-
-    uint32_t frame_index{};
-    uint32_t image_index{};
-
-    //////// NEW CODE
-
-    vk::PushConstantRange tmp_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
-    AttachmentsInfo attachments_info{.color_attachments_formats = {vk::Format::eB8G8R8A8Unorm}};
-    std::vector<Buffer> tmp_buffers;
-    GraphicsPipeline tmp_pipeline;
-
-    RenderPassFactory render_pass_factory;
-    RenderPass tmp_render_pass;
-
-    Image tmp_img;
-
-    //////// NEW CODE
-
-    vk::raii::Instance create_instance();
-    vk::raii::DebugUtilsMessengerEXT create_debugger();
-    vk::raii::PhysicalDevice create_physical_device();
-    vk::raii::Device create_device(SDL_Window* window);
-    uint32_t get_queue_family_index();
-    vk::raii::Queue create_queue();
-    MemoryAllocator create_allocator();
-
-    vk::PresentModeKHR get_swapchain_present_mode(bool vsync, bool triple_buffer);
-    vk::raii::SwapchainKHR create_swapchain();
-    std::vector<Image> create_swapchain_images();
-
-    static const std::map<DescriptorSetLayoutType, std::vector<vk::DescriptorSetLayoutBinding>>& get_layout_bindings();
-    std::vector<vk::raii::DescriptorSetLayout> create_descriptor_set_layout() const;
-
-    vk::raii::CommandPool create_command_pool();
-    vk::raii::DescriptorPool create_descriptor_pool();
-
-    std::map<DescriptorSetLayoutType, std::vector<vk::raii::DescriptorSet>> create_all_descriptor_sets();
-    std::vector<vk::raii::DescriptorSet> create_descriptor_sets(DescriptorSetLayoutType type);
-
-    std::vector<vk::raii::Fence> create_fences();
-    std::vector<vk::raii::Semaphore> create_semaphores(uint32_t num);
-    std::vector<vk::raii::CommandBuffer> create_command_buffers(uint32_t num);
-
-    void submit_update_buffer();
+    uint32_t frame_index() const;
+    void draw_final_pass();
   };
 } // namespace tge
 

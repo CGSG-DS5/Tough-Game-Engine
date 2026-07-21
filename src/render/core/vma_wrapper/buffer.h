@@ -18,8 +18,10 @@ namespace tge {
         const MemoryAllocator& alloc,
         uint32_t size,
         bool is_local,
-        vk::BufferUsageFlagBits buffer_usage
+        vk::BufferUsageFlags buffer_usage
     );
+
+    Buffer(const MemoryAllocator& allocator);
 
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
@@ -34,8 +36,8 @@ namespace tge {
 
   private:
     const MemoryAllocator& allocator;
-    VkBuffer buf;
-    VmaAllocation buf_mem;
+    VkBuffer buf{};
+    VmaAllocation buf_mem{};
     void* mapped_data{};
     bool is_local;
   };

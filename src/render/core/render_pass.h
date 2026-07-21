@@ -6,59 +6,105 @@
 #ifndef __render_pass_h_
 #define __render_pass_h_
 
-#include "vma_wrapper/image.h"
+#include "descriptor_manager.h"
+#include "image_manager.h"
+#include "pipeline_manager.h"
 
 namespace tge {
-  struct AttachmentsInfo {
-    std::vector<vk::Format> color_attachments_formats{};
-    std::optional<vk::Format> depth_attachment_format{};
-  };
-
   class RenderPass {
   public:
+    struct Attachments {
+      std::vector<Image> color;
+      std::optional<Image> depth;
+
+      Attachments() = default;
+
+      Attachments(Attachments&& other) noexcept = default;
+      Attachments& operator=(Attachments&& other) noexcept = default;
+    };
+
     RenderPass(
-        const MemoryAllocator& alloc,
-        const vk::raii::Device& device,
-        const AttachmentsInfo& info,
+        vk::Device device,
+        Attachments&& attachments,
         uint32_t width,
         uint32_t height,
-        uint32_t frames_in_flight
+        uint32_t set,
+        uint32_t binding,
+        vk::PipelineLayout layout,
+        vk::DescriptorSet descriptor,
+        vk::Sampler sampler
     );
 
-    void begin(vk::CommandBuffer cmd_buf, uint32_t frame);
-    void end(vk::CommandBuffer cmd_buf, uint32_t frame) const;
-    void resize(uint32_t width, uint32_t height);
-    void resize(vk::Extent2D screen_size);
+    RenderPass(RenderPass&& other) noexcept;
+    RenderPass& operator=(RenderPass&& other) noexcept;
+
+    void begin(vk::CommandBuffer cmd_buf);
+    void end(vk::CommandBuffer cmd_buf);
 
   private:
-    const MemoryAllocator& alloc;
-    const vk::raii::Device& device;
+    Attachments attachments;
 
-    uint32_t frames_in_flight;
+    std::vector<vk::RenderingAttachmentInfo> color_rendering_info;
+    std::optional<vk::RenderingAttachmentInfo> depth_rendering_info;
 
-    AttachmentsInfo attachments_info{};
+    vk::RenderingInfo rendering_info;
 
-    std::vector<std::vector<vk::RenderingAttachmentInfo>> color_rendering_infos;
-    std::vector<std::optional<vk::RenderingAttachmentInfo>> depth_rendering_info;
-
-    std::vector<std::vector<Image>> color_attachments{};
-    std::optional<std::vector<Image>> depth_attachment{};
-
-    std::vector<vk::RenderingInfo> rendering_info{};
-
-    void swap(RenderPass& other);
+    vk::PipelineLayout layout;
+    vk::DescriptorSet descriptor;
+    uint32_t set;
+    uint32_t binding;
   };
 
-  class RenderPassFactory {
-  public:
-    RenderPassFactory(const MemoryAllocator& alloc, const vk::raii::Device& device);
+  enum struct RenderPassType : uint32_t {
+    OPAQUE,
+    FINAL
+  };
 
-    RenderPass create_gbuffer_pass(uint32_t width, uint32_t height, uint32_t num_of_attachments, uint32_t frames_in_flight) const;
-    RenderPass create_gbuffer_pass(vk::Extent2D screen_size, uint32_t num_of_attachments, uint32_t frames_in_flight) const;
+  class RenderPassManager {
+  public:
+    RenderPassManager(
+        vk::Device device,
+        const ImageManager& image_manager,
+        const DescriptorManager& descriptor_manager,
+        const PipelineManager& pipeline_manager,
+        uint32_t frames_in_flight,
+        vk::Extent2D screen_size
+    );
+
+    void resize(vk::Extent2D new_screen_size);
+
+    void begin(vk::CommandBuffer cmd_buf, RenderPassType type, uint32_t frame_index);
+    void end();
+
+    const AttachmentsFormat& attachments_format(RenderPassType type) const;
 
   private:
-    const MemoryAllocator& alloc;
-    const vk::raii::Device& device;
+    using Attachments = RenderPass::Attachments;
+
+    vk::Device device;
+    const ImageManager& image_manager;
+    const DescriptorManager& descriptor_manager;
+    const PipelineManager& pipeline_manager;
+    uint32_t frames_in_flight;
+    vk::Extent2D screen_size;
+
+    std::map<RenderPassType, AttachmentsFormat> attachments_formats;
+    std::map<RenderPassType, std::vector<RenderPass>> render_passes;
+
+    vk::CommandBuffer current_cmd_buf;
+    RenderPassType current_type;
+    uint32_t current_frame_index;
+
+    std::map<RenderPassType, AttachmentsFormat> create_formats() const;
+    std::map<RenderPassType, std::vector<RenderPass>> create_render_passes() const;
+
+    std::vector<RenderPass> create_gbuffer_pass(
+        std::span<const vk::Format> formats,
+        vk::PipelineLayout layout,
+        std::span<const vk::DescriptorSet> descriptors,
+        uint32_t set,
+        uint32_t binding
+    ) const;
   };
 } // namespace tge
 

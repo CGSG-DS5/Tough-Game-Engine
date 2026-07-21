@@ -7,7 +7,8 @@
 
 tge::Render::Render(bool vsync, bool triple_buffer)
     : WindowHandler("Tough Game Engine", 800, 600)
-    , core(get_window_handle(), vsync, triple_buffer) {
+    , window(get_window_handle())
+    , core(window, vsync, triple_buffer) {
   run();
 }
 

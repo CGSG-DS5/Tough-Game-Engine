@@ -5,7 +5,7 @@
 
 #include "tge.h"
 
-tge::Buffer::Buffer(const MemoryAllocator& alloc, uint32_t size, bool is_local, vk::BufferUsageFlagBits buffer_usage)
+tge::Buffer::Buffer(const MemoryAllocator& alloc, uint32_t size, bool is_local, vk::BufferUsageFlags buffer_usage)
     : allocator(alloc)
     , is_local(is_local) {
   VmaAllocationCreateInfo vma_create_info{
@@ -25,7 +25,7 @@ tge::Buffer::Buffer(const MemoryAllocator& alloc, uint32_t size, bool is_local, 
   VkBufferCreateInfo buffer_create_info{
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
       .size = size,
-      .usage = static_cast<uint32_t>(buffer_usage),
+      .usage = static_cast<VkBufferUsageFlags>(buffer_usage),
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE
   };
 
@@ -45,6 +45,9 @@ tge::Buffer::~Buffer() {
     vmaDestroyBuffer(allocator, buf, buf_mem);
   }
 }
+
+tge::Buffer::Buffer(const MemoryAllocator& allocator)
+    : allocator(allocator) {}
 
 tge::Buffer::Buffer(Buffer&& other) noexcept
     : allocator(other.allocator)
@@ -73,4 +76,3 @@ VkBuffer tge::Buffer::get_buffer() const {
 void* tge::Buffer::get_mapped_data() const {
   return mapped_data;
 }
-

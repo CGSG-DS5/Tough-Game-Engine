@@ -6,173 +6,236 @@
 #include "tge.h"
 
 tge::RenderPass::RenderPass(
-    const MemoryAllocator& alloc,
-    const vk::raii::Device& device,
-    const AttachmentsInfo& info,
+    vk::Device device,
+    Attachments&& _attachments,
     uint32_t width,
     uint32_t height,
-    uint32_t frames_in_flight
+    uint32_t set,
+    uint32_t binding,
+    vk::PipelineLayout layout,
+    vk::DescriptorSet descriptor,
+    vk::Sampler sampler
 )
-    : alloc(alloc)
-    , device(device)
-    , attachments_info(info)
-    , frames_in_flight(frames_in_flight) {
-  color_rendering_infos.resize(frames_in_flight);
-  depth_rendering_info.resize(frames_in_flight);
-  color_attachments.resize(frames_in_flight);
-  if (info.depth_attachment_format) {
-    depth_attachment.emplace();
-  }
-  rendering_info.resize(frames_in_flight);
-
-  vk::Extent3D extent{.width = width, .height = height, .depth = 1};
-  for (const auto& caf : info.color_attachments_formats) {
-    for (auto& cas : color_attachments) {
-      cas.emplace_back(
-          alloc,
-          device,
-          caf,
-          extent,
-          1,
-          vk::SampleCountFlagBits::e1,
-          vk::ImageUsageFlagBits::eColorAttachment |
-              vk::ImageUsageFlagBits::eSampled, // vk::ImageUsageFlagBits::eTransferSrc
-          false
-      );
-    }
+    : attachments(std::move(_attachments))
+    , layout(layout)
+    , descriptor(descriptor)
+    , set(set)
+    , binding(binding) {
+  auto& cri = color_rendering_info;
+  for (auto& ca : attachments.color) {
+    cri.push_back(
+        {.imageView = ca.get_image_view(),
+         .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+         .resolveMode = vk::ResolveModeFlagBits::eNone,
+         .resolveImageLayout = vk::ImageLayout::eUndefined,
+         .loadOp = vk::AttachmentLoadOp::eClear,
+         .storeOp = vk::AttachmentStoreOp::eStore,
+         .clearValue = {{.0f, .0f, .0f, .0f}}}
+    );
   }
 
-  for (uint32_t i = 0; i < frames_in_flight; i++) {
-    auto& cri = color_rendering_infos[i];
-    auto& cas = color_attachments[i];
+  vk::ClearValue clear_value;
+  clear_value.depthStencil.depth = 1.f;
+  clear_value.depthStencil.stencil = 0.f;
 
-    for (auto& ca : cas) {
-      cri.push_back(
-          {.imageView = ca.get_image_view(),
-           .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-           .resolveMode = vk::ResolveModeFlagBits::eNone,
-           .resolveImageLayout = vk::ImageLayout::eUndefined,
-           .loadOp = vk::AttachmentLoadOp::eClear,
-           .storeOp = vk::AttachmentStoreOp::eStore,
-           .clearValue = {{.0f, .0f, .0f, .0f}}}
-      );
-    }
-  }
-
-  if (!depth_attachment) {
-    return;
-  } else {
-    for (uint32_t i = 0; i < frames_in_flight; i++) {
-      auto& dri = depth_rendering_info[i];
-
-      depth_attachment->emplace_back(
-          alloc,
-          device,
-          *info.depth_attachment_format,
-          extent,
-          1,
-          vk::SampleCountFlagBits::e1,
-          vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
-          false
-      );
-
-      auto& da = depth_attachment.value()[i];
-
-      dri = {
-          .imageView = da.get_image_view(),
-          .imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-          .resolveMode = vk::ResolveModeFlagBits::eNone,
-          .resolveImageLayout = vk::ImageLayout::eUndefined,
-          .loadOp = vk::AttachmentLoadOp::eClear,
-          .storeOp = vk::AttachmentStoreOp::eStore,
-          .clearValue = {{.0f, .0f, .0f, .0f}}
-      };
-    }
-  }
-
-  for (uint32_t i = 0; i < frames_in_flight; i++) {
-    auto& ri = rendering_info[i];
-    auto& cri = color_rendering_infos[i];
-    auto& dri = depth_rendering_info[i];
-    ri = {
-        .renderArea = {.offset = {0, 0}, .extent = {width, height}},
-        .layerCount = 1,
-        .colorAttachmentCount = static_cast<uint32_t>(cri.size()),
-        .pColorAttachments = cri.data(),
-        .pDepthAttachment = dri ? &*dri : nullptr
+  if (attachments.depth) {
+    depth_rendering_info = {
+        .imageView = attachments.depth->get_image_view(),
+        .imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+        .resolveMode = vk::ResolveModeFlagBits::eNone,
+        .resolveImageLayout = vk::ImageLayout::eUndefined,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = clear_value
     };
   }
+
+  rendering_info = {
+      .renderArea = {.offset = {0, 0}, .extent = {width, height}},
+      .layerCount = 1,
+      .colorAttachmentCount = static_cast<uint32_t>(color_rendering_info.size()),
+      .pColorAttachments = color_rendering_info.data(),
+      .pDepthAttachment = depth_rendering_info ? &*depth_rendering_info : nullptr
+  };
+
+  std::vector<vk::DescriptorImageInfo> images_info;
+  for (uint32_t i = 0; i < attachments.color.size(); i++) {
+    images_info.push_back(
+        {.sampler = sampler,
+         .imageView = attachments.color[i].get_image_view(),
+         .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal}
+    );
+  }
+
+  vk::WriteDescriptorSet write_ds{
+      .dstSet = descriptor,
+      .dstBinding = binding,
+      .dstArrayElement = 0,
+      .descriptorCount = static_cast<uint32_t>(images_info.size()),
+      .descriptorType = vk::DescriptorType::eCombinedImageSampler,
+      .pImageInfo = images_info.data()
+  };
+  device.updateDescriptorSets(write_ds, nullptr);
 }
 
-void tge::RenderPass::swap(RenderPass& other) {
-  color_rendering_infos.swap(other.color_rendering_infos);
-  depth_rendering_info.swap(other.depth_rendering_info);
-  color_attachments.swap(other.color_attachments);
-  depth_attachment.swap(other.depth_attachment);
-  rendering_info.swap(other.rendering_info);
-  std::swap(attachments_info, other.attachments_info);
+tge::RenderPass::RenderPass(RenderPass&& other) noexcept
+    : attachments(std::move(other.attachments))
+    , color_rendering_info(std::move(other.color_rendering_info))
+    , depth_rendering_info(std::move(other.depth_rendering_info))
+    , rendering_info(other.rendering_info)
+    , layout(other.layout)
+    , descriptor(other.descriptor)
+    , set(other.set)
+    , binding(other.binding) {
+  rendering_info.setColorAttachments(color_rendering_info);
+  rendering_info.pDepthAttachment = depth_rendering_info ? &(*depth_rendering_info) : nullptr;
 }
 
-void tge::RenderPass::begin(vk::CommandBuffer cmd_buf, uint32_t frame) {
-  for (auto& attachment : color_attachments[frame]) {
+tge::RenderPass& tge::RenderPass::operator=(RenderPass&& other) noexcept {
+  if (this != &other) {
+    attachments = std::move(other.attachments);
+    color_rendering_info = std::move(other.color_rendering_info);
+    depth_rendering_info = std::move(other.depth_rendering_info);
+    rendering_info = other.rendering_info;
+    layout = other.layout;
+    descriptor = other.descriptor;
+    set = other.set;
+    binding = other.binding;
+
+    rendering_info.setColorAttachments(color_rendering_info);
+    rendering_info.pDepthAttachment = depth_rendering_info ? &(*depth_rendering_info) : nullptr;
+  }
+
+  return *this;
+}
+
+void tge::RenderPass::begin(vk::CommandBuffer cmd_buf) {
+  for (auto& attachment : attachments.color) {
     attachment.switch_layout(cmd_buf, vk::ImageLayout::eColorAttachmentOptimal);
   }
-  if (depth_attachment) {
-    (*depth_attachment)[frame].switch_layout(cmd_buf, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+  if (attachments.depth) {
+    attachments.depth->switch_layout(cmd_buf, vk::ImageLayout::eDepthStencilAttachmentOptimal);
   }
 
-  cmd_buf.beginRendering(rendering_info[frame]);
+  cmd_buf.beginRendering(rendering_info);
 
   cmd_buf.setViewport(
       0,
       vk::Viewport(
           0.f,
           0.f,
-          static_cast<float>(rendering_info[frame].renderArea.extent.width),
-          static_cast<float>(rendering_info[frame].renderArea.extent.height),
+          static_cast<float>(rendering_info.renderArea.extent.width),
+          static_cast<float>(rendering_info.renderArea.extent.height),
           0.f,
           1.f
       )
   );
-  cmd_buf.setScissor(0, rendering_info[frame].renderArea);
+  cmd_buf.setScissor(0, rendering_info.renderArea);
 }
 
-void tge::RenderPass::end(vk::CommandBuffer cmd_buf, uint32_t frame) const {
+void tge::RenderPass::end(vk::CommandBuffer cmd_buf) {
   cmd_buf.endRendering();
-}
 
-void tge::RenderPass::resize(uint32_t width, uint32_t height) {
-  RenderPass new_pass(alloc, device, attachments_info, width, height, frames_in_flight);
-  swap(new_pass);
-}
-
-void tge::RenderPass::resize(vk::Extent2D screen_size) {
-  resize(screen_size.width, screen_size.height);
-}
-
-tge::RenderPassFactory::RenderPassFactory(const MemoryAllocator& alloc, const vk::raii::Device& device)
-    : alloc(alloc)
-    , device(device) {}
-
-tge::RenderPass tge::RenderPassFactory::create_gbuffer_pass(
-    uint32_t width,
-    uint32_t height,
-    uint32_t num_of_attachments,
-    uint32_t frames_in_flight
-) const {
-  AttachmentsInfo info{.color_attachments_formats = {}, .depth_attachment_format = vk::Format::eD32Sfloat};
-
-  for (uint32_t i = 0; i < num_of_attachments; i++) {
-    info.color_attachments_formats.push_back(vk::Format::eR32G32B32A32Sfloat);
+  for (auto& attachment : attachments.color) {
+    attachment.switch_layout(cmd_buf, vk::ImageLayout::eShaderReadOnlyOptimal);
+  }
+  if (attachments.depth) {
+    attachments.depth->switch_layout(cmd_buf, vk::ImageLayout::eDepthStencilReadOnlyOptimal);
   }
 
-  return RenderPass(alloc, device, info, width, height, frames_in_flight);
+  cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, set, descriptor, nullptr);
 }
 
-tge::RenderPass tge::RenderPassFactory::create_gbuffer_pass(
-    vk::Extent2D screen_size,
-    uint32_t num_of_attachments,
-    uint32_t frames_in_flight
+tge::RenderPassManager::RenderPassManager(
+    vk::Device device,
+    const ImageManager& image_manager,
+    const DescriptorManager& descriptor_manager,
+    const PipelineManager& pipeline_manager,
+    uint32_t frames_in_flight,
+    vk::Extent2D screen_size
+)
+    : device(device)
+    , image_manager(image_manager)
+    , descriptor_manager(descriptor_manager)
+    , pipeline_manager(pipeline_manager)
+    , frames_in_flight(frames_in_flight)
+    , screen_size(screen_size)
+    , attachments_formats(create_formats())
+    , render_passes(create_render_passes()) {}
+
+std::vector<tge::RenderPass> tge::RenderPassManager::create_gbuffer_pass(
+    std::span<const vk::Format> formats,
+    vk::PipelineLayout layout,
+    std::span<const vk::DescriptorSet> descriptors,
+    uint32_t set,
+    uint32_t binding
 ) const {
-  return create_gbuffer_pass(screen_size.width, screen_size.height, num_of_attachments, frames_in_flight);
+  std::vector<RenderPass> passes;
+  passes.reserve(frames_in_flight);
+  for (uint32_t i = 0; i < frames_in_flight; i++) {
+    Attachments attachments;
+    attachments.color.reserve(formats.size());
+    for (auto fmt : formats) {
+      attachments.color.emplace_back(image_manager.create_color_attachment(screen_size, fmt));
+    }
+    attachments.depth = image_manager.create_depth_attachment(screen_size);
+
+    RenderPass pass(
+        device,
+        std::move(attachments),
+        screen_size.width,
+        screen_size.height,
+        set,
+        binding,
+        layout,
+        descriptors[i],
+        image_manager.sampler(ImageSamplerType::REPEAT)
+    );
+    passes.emplace_back(std::move(pass));
+  }
+
+  return passes;
+}
+
+void tge::RenderPassManager::resize(vk::Extent2D new_screen_size) {
+  screen_size = new_screen_size;
+  render_passes = create_render_passes();
+}
+
+void tge::RenderPassManager::begin(vk::CommandBuffer cmd_buf, RenderPassType type, uint32_t frame_index) {
+  current_cmd_buf = cmd_buf;
+  current_type = type;
+  current_frame_index = frame_index;
+
+  render_passes[current_type][current_frame_index].begin(current_cmd_buf);
+}
+
+void tge::RenderPassManager::end() {
+  render_passes[current_type][current_frame_index].end(current_cmd_buf);
+}
+
+const tge::AttachmentsFormat& tge::RenderPassManager::attachments_format(RenderPassType type) const {
+  return attachments_formats.at(type);
+}
+
+std::map<tge::RenderPassType, tge::AttachmentsFormat> tge::RenderPassManager::create_formats() const {
+  AttachmentsFormat final{.color = {vk::Format::eB8G8R8A8Unorm}};
+  AttachmentsFormat opaque{.color = {vk::Format::eB8G8R8A8Unorm}, .depth = vk::Format::eD32Sfloat};
+  std::map<RenderPassType, AttachmentsFormat> result{{RenderPassType::OPAQUE, opaque}, {RenderPassType::FINAL, final}};
+  return result;
+}
+
+std::map<tge::RenderPassType, std::vector<tge::RenderPass>> tge::RenderPassManager::create_render_passes() const {
+  std::vector<vk::Format> opaque_formats = attachments_format(RenderPassType::OPAQUE).color;
+  std::vector<tge::RenderPass> opaque = create_gbuffer_pass(
+      opaque_formats,
+      pipeline_manager.graphics_layout(),
+      descriptor_manager.descriptor_sets(DescriptorLayoutType::FINAL),
+      static_cast<uint32_t>(DescriptorLayoutType::FINAL),
+      0
+  );
+
+  std::map<RenderPassType, std::vector<RenderPass>> result;
+  result.emplace(RenderPassType::OPAQUE, std::move(opaque));
+  return result;
 }

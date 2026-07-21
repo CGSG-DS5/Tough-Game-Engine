@@ -158,6 +158,7 @@ foreach(SLANG_REL_PATH ${SLANG_SOURCES})
     
     message(STATUS "Scanning: ${SLANG_REL_PATH}")
     
+    set(ENTRIES "")
     find_all_entry_points(${SLANG_FILE} ENTRIES)
     
     if(ENTRIES)
