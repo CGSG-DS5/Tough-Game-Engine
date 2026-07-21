@@ -19,7 +19,7 @@ namespace tge {
      ***/
     template<typename... Args>
     GraphicsPipeline create_graphics_pipeline(Args&&... args) const {
-      return GraphicsPipeline(m_graphics_layout, std::forward<Args>(args)...);
+      return GraphicsPipeline(m_graphics_layout, device, std::forward<Args>(args)...);
     }
 
     vk::PipelineLayout graphics_layout() const;

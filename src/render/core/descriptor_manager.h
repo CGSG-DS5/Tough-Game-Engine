@@ -19,8 +19,8 @@ namespace tge {
   public:
     DescriptorManager(const vk::raii::Device& device, uint32_t frames_in_flight);
 
-    const std::vector<vk::DescriptorSetLayout>& layouts() const;
-    const std::vector<vk::DescriptorSet>& descriptor_sets(DescriptorLayoutType type) const;
+    std::span<const vk::DescriptorSetLayout> layouts() const;
+    std::span<const vk::DescriptorSet> descriptor_sets(DescriptorLayoutType type) const;
 
   private:
     const vk::raii::Device& device;
@@ -39,6 +39,8 @@ namespace tge {
     std::vector<vk::DescriptorSetLayout> create_descriptor_set_layout() const;
 
     vk::raii::DescriptorPool create_descriptor_pool() const;
+
+    uint32_t num_of_descriptor_sets(DescriptorLayoutType type) const;
 
     std::map<DescriptorLayoutType, std::vector<vk::raii::DescriptorSet>> create_all_descriptor_sets_raii() const;
     std::vector<vk::raii::DescriptorSet> create_descriptor_sets(DescriptorLayoutType type) const;

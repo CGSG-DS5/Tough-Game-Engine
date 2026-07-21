@@ -14,11 +14,11 @@ tge::DescriptorManager::DescriptorManager(const vk::raii::Device& device, uint32
     , descriptor_sets_raii(create_all_descriptor_sets_raii())
     , m_descriptor_sets(create_all_descriptor_sets()) {}
 
-const std::vector<vk::DescriptorSetLayout>& tge::DescriptorManager::layouts() const {
+std::span<const vk::DescriptorSetLayout> tge::DescriptorManager::layouts() const {
   return descriptor_set_layouts;
 }
 
-const std::vector<vk::DescriptorSet>& tge::DescriptorManager::descriptor_sets(DescriptorLayoutType type) const {
+std::span<const vk::DescriptorSet> tge::DescriptorManager::descriptor_sets(DescriptorLayoutType type) const {
   return m_descriptor_sets.at(type);
 }
 
@@ -81,7 +81,7 @@ vk::raii::DescriptorPool tge::DescriptorManager::create_descriptor_pool() const 
   std::vector<vk::DescriptorPoolSize> sizes;
 
   for (const auto& [type, bindings] : layout_bindings) {
-    uint32_t num_sets = type == DescriptorLayoutType::RENDER ? frames_in_flight : 1;
+    uint32_t num_sets = num_of_descriptor_sets(type);
     max_sets += num_sets;
     for (const auto& binding : bindings) {
       sizes.push_back({.type = binding.descriptorType, .descriptorCount = binding.descriptorCount * num_sets});
@@ -107,9 +107,19 @@ tge::DescriptorManager::create_all_descriptor_sets_raii() const {
   return res;
 }
 
+uint32_t tge::DescriptorManager::num_of_descriptor_sets(DescriptorLayoutType type) const {
+  switch (type) {
+  case DescriptorLayoutType::FINAL:
+  case DescriptorLayoutType::RENDER:
+    return frames_in_flight;
+  default:
+    return 1;
+  }
+}
+
 std::vector<vk::raii::DescriptorSet> tge::DescriptorManager::create_descriptor_sets(DescriptorLayoutType type) const {
   std::vector<vk::DescriptorSetLayout> layouts(
-      type == DescriptorLayoutType::RENDER ? frames_in_flight : 1,
+      num_of_descriptor_sets(type),
       descriptor_set_layouts[static_cast<uint32_t>(type)]
   );
 
@@ -120,8 +130,8 @@ std::vector<vk::raii::DescriptorSet> tge::DescriptorManager::create_descriptor_s
   );
 }
 
-std::map<tge::DescriptorLayoutType, std::vector<vk::DescriptorSet>>
-tge::DescriptorManager::create_all_descriptor_sets() const {
+std::map<tge::DescriptorLayoutType, std::vector<vk::DescriptorSet>> tge::DescriptorManager::create_all_descriptor_sets(
+) const {
   std::map<DescriptorLayoutType, std::vector<vk::DescriptorSet>> result;
   for (const auto& [k, v] : descriptor_sets_raii) {
     result[k] = {};

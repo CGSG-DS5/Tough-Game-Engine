@@ -11,6 +11,16 @@ tge::GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&& other) noexcept
     , modules(std::move(other.modules))
     , pipeline(std::move(other.pipeline)) {}
 
+tge::GraphicsPipeline& tge::GraphicsPipeline::operator=(GraphicsPipeline&& other) noexcept {
+  if (this != &other) {
+    name = std::move(other.name);
+    modules = std::move(other.modules);
+    pipeline = std::move(other.pipeline);
+  }
+
+  return *this;
+}
+
 tge::GraphicsPipeline::~GraphicsPipeline() {}
 
 tge::GraphicsPipeline::operator vk::Pipeline() const {
@@ -132,13 +142,31 @@ vk::PipelineMultisampleStateCreateInfo tge::GraphicsPipeline::create_multisample
   return multisample_state;
 }
 
-vk::PipelineDepthStencilStateCreateInfo tge::GraphicsPipeline::create_depth_stencil_state(bool is_depth) const {
+vk::PipelineDepthStencilStateCreateInfo tge::GraphicsPipeline::create_depth_stencil_state(
+    bool depth_test,
+    bool depth_write,
+    bool stencil_test,
+    bool is_depth,
+    bool is_stencil
+) const {
+  vk::StencilOpState stencil_op_state{
+      .failOp = vk::StencilOp::eKeep,
+      .passOp = stencil_test ? vk::StencilOp::eKeep : vk::StencilOp::eReplace,
+      .depthFailOp = vk::StencilOp::eKeep,
+      .compareOp = stencil_test ? vk::CompareOp::eEqual : vk::CompareOp::eAlways,
+      .compareMask = 0xFF,
+      .writeMask = stencil_test ? 0x00u : 0xFFu,
+      .reference = 1
+  };
+
   vk::PipelineDepthStencilStateCreateInfo depth_stencil_state{
-      .depthTestEnable = true,
-      .depthWriteEnable = true,
+      .depthTestEnable = is_depth && depth_test,
+      .depthWriteEnable = is_depth && depth_write,
       .depthCompareOp = vk::CompareOp::eLess,
       .depthBoundsTestEnable = vk::False,
-      .stencilTestEnable = false,
+      .stencilTestEnable = is_stencil,
+      .front = stencil_op_state,
+      .back = stencil_op_state,
       .minDepthBounds = 0.f,
       .maxDepthBounds = 1.f,
   };
@@ -173,12 +201,12 @@ vk::PipelineColorBlendStateCreateInfo tge::GraphicsPipeline::create_color_blend_
   return color_blend_state;
 }
 
-vk::PipelineRenderingCreateInfo tge::GraphicsPipeline::create_rendering(const AttachmentsInfo& attachments_info) {
+vk::PipelineRenderingCreateInfo tge::GraphicsPipeline::create_rendering(const AttachmentsFormat& attachments_format) {
   vk::PipelineRenderingCreateInfoKHR pipeline_rendering_create_info{
-      .colorAttachmentCount = static_cast<uint32_t>(attachments_info.color_attachments_formats.size()),
-      .pColorAttachmentFormats = attachments_info.color_attachments_formats.data(),
-      .depthAttachmentFormat =
-          attachments_info.depth_attachment_format ? *attachments_info.depth_attachment_format : vk::Format::eUndefined,
+      .colorAttachmentCount = static_cast<uint32_t>(attachments_format.color.size()),
+      .pColorAttachmentFormats = attachments_format.color.data(),
+      .depthAttachmentFormat = attachments_format.depth ? *attachments_format.depth : vk::Format::eUndefined,
+      .stencilAttachmentFormat = attachments_format.has_stencil() ? *attachments_format.depth : vk::Format::eUndefined,
   };
 
   return pipeline_rendering_create_info;

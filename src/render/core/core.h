@@ -30,6 +30,35 @@ namespace tge {
     void frame_start();
     void frame_end();
 
+    template<typename T>
+    void create_shader(
+        RenderPassType type,
+        const std::string& name,
+        vk::PrimitiveTopology topology,
+        vk::CullModeFlags cull_mode = vk::CullModeFlagBits::eBack,
+        bool depth_test = true,
+        bool depth_write = true
+    ) {
+      graphics_pipelines.try_emplace(type);
+      switch (type) {
+      case RenderPassType::OPAQUE:
+        graphics_pipelines[type].push_back(pipeline_manager.create_graphics_pipeline(
+            T{},
+            name,
+            topology,
+            render_pass_manager.attachments_format(type),
+            cull_mode,
+            false,
+            depth_test,
+            depth_write,
+            false
+        ));
+        break;
+      }
+    }
+
+    void create_final_shader(const std::string& name);
+
   private:
     VulkanContext ctx;
     Surface surface;
@@ -46,21 +75,19 @@ namespace tge {
     std::vector<vk::raii::Semaphore> render_finished_semaphores;
     std::vector<vk::raii::Semaphore> image_available_semaphores;
 
-    //////// NEW CODE
+    RenderPassManager render_pass_manager;
 
-    vk::PushConstantRange tmp_range{.stageFlags = vk::ShaderStageFlagBits::eAllGraphics, .size = 4};
-    AttachmentsInfo attachments_info{.color_attachments_formats = {vk::Format::eB8G8R8A8Unorm}};
-    std::vector<Buffer> tmp_buffers;
-    GraphicsPipeline tmp_pipeline;
+    std::map<RenderPassType, std::vector<GraphicsPipeline>> graphics_pipelines;
+    ////// TMP CODE
 
-    RenderPassFactory render_pass_factory;
-    RenderPass tmp_render_pass;
+    Buffer tmp_vert_buffer;
+    Buffer tmp_ind_buffer;
+    uint32_t num_of_triangles{32};
 
-    Image tmp_img;
-
-    //////// NEW CODE
+    ////// TMP CODE
 
     uint32_t frame_index() const;
+    void draw_final_pass();
   };
 } // namespace tge
 

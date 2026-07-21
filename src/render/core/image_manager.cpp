@@ -14,6 +14,39 @@ tge::ImageManager::ImageManager(
     , device(device)
     , samplers(create_samplers(physical_device)) {}
 
+tge::Image tge::ImageManager::create_color_attachment(vk::Extent2D sizes, vk::Format fmt) const {
+  return create_image(
+      fmt,
+      vk::Extent3D{sizes.width, sizes.height, 1},
+      1,
+      vk::SampleCountFlagBits::e1,
+      vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+      false
+  );
+}
+
+tge::Image tge::ImageManager::create_depth_attachment(vk::Extent2D sizes) const {
+  return create_image(
+      vk::Format::eD32Sfloat,
+      vk::Extent3D{sizes.width, sizes.height, 1},
+      1,
+      vk::SampleCountFlagBits::e1,
+      vk::ImageUsageFlagBits::eDepthStencilAttachment,
+      false
+  );
+}
+
+tge::Image tge::ImageManager::create_depth_stencil_attachment(vk::Extent2D sizes) const {
+  return create_image(
+      vk::Format::eD32SfloatS8Uint,
+      vk::Extent3D{sizes.width, sizes.height, 1},
+      1,
+      vk::SampleCountFlagBits::e1,
+      vk::ImageUsageFlagBits::eDepthStencilAttachment,
+      false
+  );
+}
+
 std::map<tge::ImageSamplerType, vk::raii::Sampler> tge::ImageManager::create_samplers(vk::PhysicalDevice physical_device
 ) const {
   std::map<ImageSamplerType, vk::raii::Sampler> result;

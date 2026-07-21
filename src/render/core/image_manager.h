@@ -26,6 +26,10 @@ namespace tge {
     }
 
     Image create_texture() const;
+    Image create_color_attachment(vk::Extent2D sizes, vk::Format fmt) const;
+    Image create_depth_attachment(vk::Extent2D sizes) const;
+    Image create_depth_stencil_attachment(vk::Extent2D sizes) const;
+
     vk::Sampler sampler(ImageSamplerType type) const;
 
   private:

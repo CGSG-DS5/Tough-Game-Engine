@@ -7,11 +7,32 @@
 #define __graphics_pipeline_h_
 
 #include "../core_exception.h"
-#include "../render_pass.h"
 
 namespace tge {
+  struct AttachmentsFormat {
+    std::vector<vk::Format> color;
+    std::optional<vk::Format> depth;
+
+    bool has_stencil() const {
+      return depth == vk::Format::eD32SfloatS8Uint;
+    }
+  };
+
   namespace vertex_type {
-    struct NoVertices {};
+    struct NoVertices {
+      static constexpr std::vector<uint32_t> get_sizes() {
+        return {};
+      }
+    };
+
+    struct Test {
+      float pos[3];
+      float color[4];
+
+      static constexpr std::vector<uint32_t> get_sizes() {
+        return {12, 16};
+      }
+    };
   } // namespace vertex_type
 
   class GraphicsPipeline {
@@ -27,9 +48,12 @@ namespace tge {
         const Vert& __tmp,
         const std::string& name,
         vk::PrimitiveTopology topology,
-        const AttachmentsInfo& attachments_info,
+        const AttachmentsFormat& attachments_format,
         vk::CullModeFlags cull_mode = vk::CullModeFlagBits::eBack,
-        bool dynamic_polygon_mode = false
+        bool dynamic_polygon_mode = false,
+        bool depth_test = true,
+        bool depth_write = true,
+        bool stencil_test = false
     )
         : device(device)
         , name(name) {
@@ -37,17 +61,24 @@ namespace tge {
       auto shader_stages = create_shader_stages();
       auto dynamic_states = create_dynamic_states(dynamic_polygon_mode);
       auto dynamic_state = create_dynamic_state(dynamic_states);
-      auto vertex_input = create_vertex_input<Vert>();
+      auto binding_description = create_binding_description<Vert>();
+      auto attribute_descriptions = create_attribute_descriptions<Vert>();
+      auto vertex_input = create_vertex_input<Vert>(binding_description, attribute_descriptions);
       auto input_assembly = create_input_assembly(topology);
       auto viewport_state = create_viewport_state();
       auto rasterizer = create_rasterizer(cull_mode);
       auto multisample_state = create_multisample_state();
-      auto depth_stencil_state = create_depth_stencil_state(attachments_info.depth_attachment_format.has_value());
+      auto depth_stencil_state = create_depth_stencil_state(
+          depth_test,
+          depth_write,
+          stencil_test,
+          attachments_format.depth.has_value(),
+          attachments_format.has_stencil()
+      );
       auto attachment_states =
-          create_color_blend_attachment_states(static_cast<uint32_t>(attachments_info.color_attachments_formats.size())
-          );
+          create_color_blend_attachment_states(static_cast<uint32_t>(attachments_format.color.size()));
       auto color_blend_states = create_color_blend_state(attachment_states);
-      auto rendering = create_rendering(attachments_info);
+      auto rendering = create_rendering(attachments_format);
 
       vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipeline_create_info = {
           {.stageCount = static_cast<uint32_t>(shader_stages.size()),
@@ -57,7 +88,8 @@ namespace tge {
            .pViewportState = &viewport_state,
            .pRasterizationState = &rasterizer,
            .pMultisampleState = &multisample_state,
-           .pDepthStencilState = attachments_info.depth_attachment_format ? &depth_stencil_state : nullptr,
+           .pDepthStencilState =
+               (attachments_format.depth || attachments_format.has_stencil()) ? &depth_stencil_state : nullptr,
            .pColorBlendState = &color_blend_states,
            .pDynamicState = &dynamic_state,
            .layout = layout,
@@ -72,6 +104,7 @@ namespace tge {
     GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
 
     GraphicsPipeline(GraphicsPipeline&& other) noexcept;
+    GraphicsPipeline& operator=(GraphicsPipeline&& other) noexcept;
 
     ~GraphicsPipeline();
 
@@ -92,35 +125,42 @@ namespace tge {
     vk::PipelineViewportStateCreateInfo create_viewport_state() const;
     vk::PipelineRasterizationStateCreateInfo create_rasterizer(vk::CullModeFlags cull_mode) const;
     vk::PipelineMultisampleStateCreateInfo create_multisample_state() const;
-    vk::PipelineDepthStencilStateCreateInfo create_depth_stencil_state(bool is_depth) const;
+    vk::PipelineDepthStencilStateCreateInfo
+    create_depth_stencil_state(bool depth_test, bool depth_write, bool stencil_test, bool is_depth, bool is_stencil)
+        const;
     std::vector<vk::PipelineColorBlendAttachmentState> create_color_blend_attachment_states(uint32_t attachment_num);
     vk::PipelineColorBlendStateCreateInfo
     create_color_blend_state(const std::vector<vk::PipelineColorBlendAttachmentState>& attachment_states);
-    vk::PipelineRenderingCreateInfo create_rendering(const AttachmentsInfo& attachments_info);
+    vk::PipelineRenderingCreateInfo create_rendering(const AttachmentsFormat& attachments_format);
 
     template<typename Vert>
-    vk::PipelineVertexInputStateCreateInfo create_vertex_input() const {
+    vk::VertexInputBindingDescription  create_binding_description() const {
       vk::VertexInputBindingDescription binding_description{
           .binding = 0,
           .stride = sizeof(Vert),
           .inputRate = vk::VertexInputRate::eVertex
       };
 
+      return binding_description;
+    }
+
+    template<typename Vert>
+    std::vector<vk::VertexInputAttributeDescription> create_attribute_descriptions() const {
       std::vector<uint32_t> vert_sizes = Vert::get_sizes();
       std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(vert_sizes.size());
 
       static auto get_format = [](uint32_t size) -> vk::Format {
         switch (size) {
-        case 8:
+        case 16:
           return vk::Format::eR32G32B32A32Sfloat;
-        case 4:
+        case 12:
           return vk::Format::eR32G32B32Sfloat;
-        case 2:
+        case 8:
           return vk::Format::eR32G32Sfloat;
-        case 1:
+        case 4:
           return vk::Format::eR32Sfloat;
         default:
-          throw CoreException("Invalid vertex size: " + size);
+          throw CoreException(std::format("Invalid vertex size: {}", size));
         }
       };
 
@@ -131,6 +171,14 @@ namespace tge {
         offset += vert_sizes[i];
       }
 
+      return attribute_descriptions;
+    }
+
+    template<typename Vert>
+    vk::PipelineVertexInputStateCreateInfo create_vertex_input(
+        const vk::VertexInputBindingDescription& binding_description,
+        std::span<const vk::VertexInputAttributeDescription> attribute_descriptions
+    ) const {
       vk::PipelineVertexInputStateCreateInfo vertex_input{
           .vertexBindingDescriptionCount = 1,
           .pVertexBindingDescriptions = &binding_description,
@@ -143,7 +191,10 @@ namespace tge {
   };
 
   template<>
-  inline vk::PipelineVertexInputStateCreateInfo GraphicsPipeline::create_vertex_input<vertex_type::NoVertices>() const {
+  inline vk::PipelineVertexInputStateCreateInfo GraphicsPipeline::create_vertex_input<vertex_type::NoVertices>(
+      const vk::VertexInputBindingDescription& binding_description,
+      std::span<const vk::VertexInputAttributeDescription> attribute_descriptions
+  ) const {
     return {};
   }
 } // namespace tge

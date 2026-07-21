@@ -36,7 +36,7 @@ void tge::CommandManager::wait_finishing() const {
 }
 
 const vk::CommandBuffer& tge::CommandManager::operator*() const {
-  return command_buffers[m_frame_index];
+  return *command_buffers[m_frame_index];
 }
 
 const vk::CommandBuffer* tge::CommandManager::operator->() const {

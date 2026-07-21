@@ -65,7 +65,14 @@ static vk::ImageViewType get_image_view_type(bool is_cube, vk::Extent3D extent) 
 }
 
 static vk::ImageAspectFlags get_aspect(vk::Format fmt) {
-  return fmt == vk::Format::eD32Sfloat ? vk::ImageAspectFlagBits::eDepth : vk::ImageAspectFlagBits::eColor;
+  switch (fmt) {
+  case vk::Format::eD32Sfloat:
+    return vk::ImageAspectFlagBits::eDepth;
+  case vk::Format::eD32SfloatS8Uint:
+    return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+  default:
+    return vk::ImageAspectFlagBits::eColor;
+  }
 }
 
 static uint32_t get_mip_count(uint32_t mip_count, vk::Extent3D extent) {
@@ -191,18 +198,17 @@ std::pair<vk::PipelineStageFlags2, vk::AccessFlags2> tge::Image::get_stage_acess
     return {vk::PipelineStageFlagBits2::eBottomOfPipe, vk::AccessFlagBits2::eNone};
   case vk::ImageLayout::eDepthStencilAttachmentOptimal:
     return {
-        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
         vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
     };
   case vk::ImageLayout::eTransferDstOptimal:
-    return {
-        vk::PipelineStageFlagBits2::eTransfer,
-        vk::AccessFlagBits2::eTransferWrite
-    };
+    return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite};
   case vk::ImageLayout::eShaderReadOnlyOptimal:
+    return {vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead};
+  case vk::ImageLayout::eDepthStencilReadOnlyOptimal:
     return {
-        vk::PipelineStageFlagBits2::eFragmentShader,
-        vk::AccessFlagBits2::eShaderRead
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eShaderRead
     };
   }
 
